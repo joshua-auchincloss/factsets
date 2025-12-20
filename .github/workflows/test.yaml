@@ -12,6 +12,10 @@ on:
   workflow_dispatch:
     inputs: {}
 
+concurrency:
+  group: ${{ github.workflow }}-${{  github.sha }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: "Run Tests"
