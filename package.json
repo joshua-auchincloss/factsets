@@ -14,7 +14,7 @@
 		"dist": "bun run clean && bun run build && bun run bundle && bun run copy-assets",
 		"copy-assets": "node scripts/copy-assets.mjs",
 		"inspect": "bunx @modelcontextprotocol/inspector bun ./src/main.ts",
-		"e2e": "./scripts/e2e-test.sh",
+		"e2e": "./scripts/e2e_test.sh",
 		"format": "biome format --write",
 		"lint": "biome lint",
 		"migrations": "drizzle-kit generate"

@@ -1,4 +1,5 @@
 #!/bin/bash
+
 set -e
 
 # E2E test: simulates installing the package from npm and running it
