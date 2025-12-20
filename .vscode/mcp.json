@@ -1,0 +1,10 @@
+{
+	"servers": {
+		"factsets": {
+			"type": "stdio",
+			"command": "node",
+			"args": ["dist/main.js", "mcp-server"]
+		}
+	},
+	"inputs": []
+}

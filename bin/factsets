@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+
+import * as main from "../dist/main.js";
+
+await main.main();
