@@ -1,3 +1,10 @@
+---
+name: factsets-quickstart
+title: "Factsets Quickstart Guide"
+description: "A beginner's guide to using Factsets for knowledge management"
+tags: ["factsets:system", "getting-started"]
+updated: 2025-12-20
+---
 # Factsets Quickstart Guide
 
 Welcome to Factsets! This guide will help you get started with building your knowledge base.

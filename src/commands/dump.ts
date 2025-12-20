@@ -27,7 +27,7 @@ interface DumpOutput {
 	tags: Array<{
 		id: number;
 		name: string;
-		description: string | null;
+		description: string;
 		usageCount: number;
 	}>;
 	facts: Array<{

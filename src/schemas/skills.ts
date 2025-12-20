@@ -39,6 +39,8 @@ export const skillCreateInput = z.object({
 	content: z.string().min(1),
 	tags: z.array(z.string().min(1)),
 	references: skillReferences.optional(),
+	// Optional: ID of execution log that validated this skill (for command-based skills)
+	executionLogId: z.number().int().positive().optional(),
 });
 
 export const skillUpdateInput = z.object({
@@ -48,6 +50,8 @@ export const skillUpdateInput = z.object({
 	tags: z.array(z.string()).optional(),
 	appendTags: z.array(z.string()).optional(),
 	references: skillReferencesUpdate.optional(),
+	// Optional: ID of execution log that validated this skill (for command-based skills)
+	executionLogId: z.number().int().positive().optional(),
 });
 
 export const skillSyncInput = z.object({
@@ -89,6 +93,22 @@ export const skillLinkInput = z.object({
 export const skillDeleteInput = z.object({
 	names: z.array(z.string().min(1)).min(1),
 	deleteFiles: z.boolean().default(false).optional(),
+	soft: z
+		.boolean()
+		.default(false)
+		.optional()
+		.describe("If true, soft delete (set deletedAt) instead of hard delete"),
+});
+
+export const skillRestoreInput = z.object({
+	names: z
+		.array(z.string().min(1))
+		.min(1)
+		.describe("Names of soft-deleted skills to restore"),
+});
+
+export const skillRestoreOutput = z.object({
+	restored: z.number().describe("Number of skills restored"),
 });
 
 export const skillCreateOutput = z.object({
@@ -107,6 +127,7 @@ export const skillSearchOutput = z.object({
 			tags: z.array(z.string()),
 			filePath: z.string(),
 			hasStaleDeps: z.boolean(),
+			executionLogId: z.number().nullable(),
 		}),
 	),
 	nextCursor: z
@@ -124,6 +145,7 @@ export const skillGetOutput = z.object({
 	title: z.string(),
 	content: z.string(),
 	tags: z.array(z.string()),
+	executionLogId: z.number().nullable(),
 	references: z.object({
 		skills: z.array(
 			z.object({
@@ -161,6 +183,67 @@ export const skillsGetOutput = z.object({
 	notFound: z.array(z.string()),
 });
 
+// Dependency graph types
+export const skillDependencyGraphInput = z.object({
+	skillName: z
+		.string()
+		.min(1)
+		.describe("The name of the skill to get the dependency graph for"),
+	maxDepth: z
+		.number()
+		.int()
+		.positive()
+		.default(3)
+		.optional()
+		.describe("Maximum depth to traverse (default: 3)"),
+	includeContent: z
+		.boolean()
+		.default(false)
+		.optional()
+		.describe("Include content of each node"),
+});
+
+const dependencyNodeBase = z.object({
+	type: z.enum(["skill", "resource", "fact"]),
+	id: z.union([z.number(), z.string()]),
+	name: z.string(),
+	isStale: z.boolean().optional(),
+});
+
+export const skillDependencyGraphOutput = z.object({
+	root: z.object({
+		name: z.string(),
+		title: z.string(),
+		tags: z.array(z.string()),
+		content: z.string().optional(),
+	}),
+	nodes: z.array(
+		z.object({
+			type: z.enum(["skill", "resource", "fact"]),
+			id: z.union([z.number(), z.string()]),
+			name: z.string(),
+			title: z.string().optional(),
+			content: z.string().optional(),
+			isStale: z.boolean().optional(),
+			depth: z.number(),
+		}),
+	),
+	edges: z.array(
+		z.object({
+			from: z.string(),
+			to: z.string(),
+			relation: z.string(),
+		}),
+	),
+	summary: z.object({
+		totalSkills: z.number(),
+		totalResources: z.number(),
+		totalFacts: z.number(),
+		staleCount: z.number(),
+		maxDepthReached: z.number(),
+	}),
+});
+
 export type SkillCreateInput = z.infer<typeof skillCreateInput>;
 export type SkillUpdateInput = z.infer<typeof skillUpdateInput>;
 export type SkillSyncInput = z.infer<typeof skillSyncInput>;
@@ -169,7 +252,15 @@ export type SkillGetInput = z.infer<typeof skillGetInput>;
 export type SkillsGetInput = z.infer<typeof skillsGetInput>;
 export type SkillLinkInput = z.infer<typeof skillLinkInput>;
 export type SkillDeleteInput = z.infer<typeof skillDeleteInput>;
+export type SkillRestoreInput = z.infer<typeof skillRestoreInput>;
 export type SkillCreateOutput = z.infer<typeof skillCreateOutput>;
 export type SkillSearchOutput = z.infer<typeof skillSearchOutput>;
 export type SkillGetOutput = z.infer<typeof skillGetOutput>;
 export type SkillsGetOutput = z.infer<typeof skillsGetOutput>;
+export type SkillRestoreOutput = z.infer<typeof skillRestoreOutput>;
+export type SkillDependencyGraphInput = z.infer<
+	typeof skillDependencyGraphInput
+>;
+export type SkillDependencyGraphOutput = z.infer<
+	typeof skillDependencyGraphOutput
+>;

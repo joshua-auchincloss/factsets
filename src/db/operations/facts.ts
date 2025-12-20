@@ -1,4 +1,14 @@
-import { eq, like, sql, inArray, and, lt, desc, asc } from "drizzle-orm";
+import {
+	eq,
+	like,
+	sql,
+	inArray,
+	and,
+	lt,
+	desc,
+	asc,
+	isNull,
+} from "drizzle-orm";
 import type { DB } from "../index.js";
 import { facts, factTags, tags } from "../schema.js";
 import {
@@ -128,9 +138,11 @@ export async function searchFacts(
 		offset = cursorData.offset;
 	}
 
-	// Build conditions
-	let tagIds: number[] = [];
+	// Build conditions array (always starts with soft delete filter)
+	const conditions: ReturnType<typeof eq>[] = [isNull(facts.deletedAt)];
 
+	// Build tag IDs if needed
+	let tagIds: number[] = [];
 	if (input.tags && input.tags.length > 0) {
 		const tagResults = await db
 			.select({ id: tags.id })
@@ -147,6 +159,21 @@ export async function searchFacts(
 		tagIdsToIncrement.push(...tagIds);
 	}
 
+	// Add query condition
+	if (input.query) {
+		conditions.push(like(facts.content, `%${input.query}%`));
+	}
+
+	// Add verified filter
+	if (input.verifiedOnly) {
+		conditions.push(eq(facts.verified, true));
+	}
+
+	// Add sourceType filter
+	if (input.sourceType) {
+		conditions.push(eq(facts.sourceType, input.sourceType));
+	}
+
 	// Build query for results
 	let query = db
 		.selectDistinct({
@@ -159,28 +186,15 @@ export async function searchFacts(
 		})
 		.from(facts);
 
-	// Apply tag join if needed
+	// Apply tag join and all conditions
 	if (tagIds.length > 0) {
 		query = query
 			.innerJoin(factTags, eq(facts.id, factTags.factId))
-			.where(inArray(factTags.tagId, tagIds)) as unknown as typeof query;
-	}
-
-	// Apply text query filter
-	if (input.query) {
-		const queryCondition = like(facts.content, `%${input.query}%`);
-		query = query.where(queryCondition) as unknown as typeof query;
-	}
-
-	// Apply other conditions
-	if (input.verifiedOnly) {
-		query = query.where(eq(facts.verified, true)) as unknown as typeof query;
-	}
-
-	if (input.sourceType) {
-		query = query.where(
-			eq(facts.sourceType, input.sourceType),
-		) as unknown as typeof query;
+			.where(
+				and(inArray(factTags.tagId, tagIds), ...conditions),
+			) as unknown as typeof query;
+	} else {
+		query = query.where(and(...conditions)) as unknown as typeof query;
 	}
 
 	// Apply ordering
@@ -278,6 +292,9 @@ export async function deleteFacts(
 ): Promise<number> {
 	const conditions = [];
 
+	// Exclude already deleted facts
+	conditions.push(sql`${facts.deletedAt} IS NULL`);
+
 	if (input.ids && input.ids.length > 0) {
 		conditions.push(inArray(facts.id, input.ids));
 	}
@@ -318,16 +335,45 @@ export async function deleteFacts(
 		conditions.push(eq(facts.verified, false));
 	}
 
-	if (conditions.length === 0) {
+	if (conditions.length <= 1) {
+		// Only the deletedAt IS NULL condition
 		return 0;
 	}
 
+	// Soft delete: set deletedAt timestamp
+	if (input.soft) {
+		const result = await db
+			.update(facts)
+			.set({ deletedAt: sql`(CURRENT_TIMESTAMP)` as unknown as string })
+			.where(and(...conditions))
+			.returning({ id: facts.id });
+		return result.length;
+	}
+
+	// Hard delete
 	const result = await db
 		.delete(facts)
 		.where(and(...conditions))
 		.returning({ id: facts.id });
 
 	return result.length;
+}
+
+export async function restoreFacts(
+	db: DB,
+	ids: number[],
+): Promise<{ restored: number }> {
+	if (ids.length === 0) {
+		return { restored: 0 };
+	}
+
+	const result = await db
+		.update(facts)
+		.set({ deletedAt: null })
+		.where(and(inArray(facts.id, ids), sql`${facts.deletedAt} IS NOT NULL`))
+		.returning({ id: facts.id });
+
+	return { restored: result.length };
 }
 
 export interface FactUpdateResult {

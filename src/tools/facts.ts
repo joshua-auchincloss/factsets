@@ -7,6 +7,7 @@ import {
 	deleteFacts,
 	updateFact,
 	verifyFactsByTags,
+	restoreFacts,
 } from "../db/operations/facts.js";
 import {
 	factSubmitInput,
@@ -15,6 +16,7 @@ import {
 	factDeleteInput,
 	factUpdateInput,
 	factVerifyByTagsInput,
+	factRestoreInput,
 } from "../schemas/facts.js";
 
 export function registerFactTools(server: McpServer, db: DB) {
@@ -126,6 +128,21 @@ export function registerFactTools(server: McpServer, db: DB) {
 		},
 		async (params) => {
 			const result = await verifyFactsByTags(db, params);
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		"restore_facts",
+		{
+			description:
+				"Restore soft-deleted facts by their IDs. Returns the count of facts that were restored.",
+			inputSchema: factRestoreInput,
+		},
+		async ({ ids }) => {
+			const result = await restoreFacts(db, ids);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
 			};

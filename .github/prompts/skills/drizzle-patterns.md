@@ -1,3 +1,10 @@
+---
+name: drizzle-patterns
+title: "Drizzle ORM Patterns in Factsets"
+description: "Common Drizzle ORM patterns used throughout factsets"
+tags: ["drizzle", "sqlite", "architecture"]
+updated: 2025-12-20
+---
 # Working with Drizzle in Factsets
 
 ## Overview

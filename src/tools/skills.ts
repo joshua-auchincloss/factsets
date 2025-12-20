@@ -9,6 +9,8 @@ import {
 	getSkills,
 	linkSkill,
 	deleteSkills,
+	getDependencyGraph,
+	restoreSkills,
 } from "../db/operations/skills.js";
 import {
 	skillCreateInput,
@@ -19,6 +21,8 @@ import {
 	skillsGetInput,
 	skillLinkInput,
 	skillDeleteInput,
+	skillDependencyGraphInput,
+	skillRestoreInput,
 } from "../schemas/skills.js";
 
 export function registerSkillTools(server: McpServer, db: DB) {
@@ -159,6 +163,36 @@ export function registerSkillTools(server: McpServer, db: DB) {
 		},
 		async (params) => {
 			const result = await deleteSkills(db, params);
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		"get_dependency_graph",
+		{
+			description:
+				"Get a dependency graph for a skill showing all connected skills, resources, and facts. Returns a tree structure with nodes and edges for visualization. Use this to fully saturate skill context before performing complex tasks.",
+			inputSchema: skillDependencyGraphInput,
+		},
+		async (params) => {
+			const result = await getDependencyGraph(db, params);
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		"restore_skills",
+		{
+			description:
+				"Restore soft-deleted skills by their names. Returns the count of skills that were restored.",
+			inputSchema: skillRestoreInput,
+		},
+		async ({ names }) => {
+			const result = await restoreSkills(db, names);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
 			};

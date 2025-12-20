@@ -1,4 +1,4 @@
-import { eq, like, sql, inArray, and, desc, asc } from "drizzle-orm";
+import { eq, like, sql, inArray, and, desc, asc, isNull } from "drizzle-orm";
 import { mkdir } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import type { DB } from "../index.js";
@@ -33,6 +33,8 @@ import type {
 	SkillSearchOutput,
 	SkillGetOutput,
 	SkillsGetOutput,
+	SkillDependencyGraphInput,
+	SkillDependencyGraphOutput,
 } from "../../schemas/skills.js";
 import {
 	fileExists,
@@ -41,7 +43,11 @@ import {
 	toAbsolutePath,
 	toRelativePath,
 } from "../../utils/fs.js";
-
+import {
+	parseFrontmatter,
+	updateFrontmatter,
+	extractBody,
+} from "../../utils/frontmatter.js";
 export async function resolveSkillsDir(db: DB): Promise<string> {
 	const clientConfig = await getConfig(db, "client");
 	const customDir = await getConfig(db, "skills_dir");
@@ -57,10 +63,20 @@ export async function createSkill(
 	const relativeFilePath = join(skillsDir, `${input.name}.md`);
 	// Use absolute path for file operations
 	const absoluteFilePath = toAbsolutePath(relativeFilePath);
-	const contentHash = computeHash(input.content);
+
+	// Add frontmatter to content
+	const now = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+	const contentWithFrontmatter = updateFrontmatter(input.content, {
+		name: input.name,
+		title: input.title,
+		description: input.description,
+		tags: input.tags,
+		updated: now,
+	});
+	const contentHash = computeHash(contentWithFrontmatter);
 
 	await mkdir(dirname(absoluteFilePath), { recursive: true });
-	await writeTextFile(relativeFilePath, input.content);
+	await writeTextFile(relativeFilePath, contentWithFrontmatter);
 
 	const result = await db
 		.insert(skills)
@@ -70,6 +86,7 @@ export async function createSkill(
 			description: input.description,
 			filePath: relativeFilePath,
 			contentHash,
+			executionLogId: input.executionLogId,
 		})
 		.returning({ id: skills.id });
 
@@ -167,6 +184,8 @@ export async function updateSkill(
 
 	if (input.title) updates.title = input.title;
 	if (input.description !== undefined) updates.description = input.description;
+	if (input.executionLogId !== undefined)
+		updates.executionLogId = input.executionLogId;
 
 	await db.update(skills).set(updates).where(eq(skills.id, skillId));
 
@@ -287,7 +306,12 @@ export async function updateSkill(
 export async function syncSkill(
 	db: DB,
 	input: SkillSyncInput,
-): Promise<{ name: string; contentHash: string; updated: boolean }> {
+): Promise<{
+	name: string;
+	contentHash: string;
+	updated: boolean;
+	metadataSynced: boolean;
+}> {
 	const skill = await db
 		.select()
 		.from(skills)
@@ -308,8 +332,74 @@ export async function syncSkill(
 	const content = await readTextFile(skillRecord.filePath);
 	const newHash = computeHash(content);
 
-	if (newHash === skillRecord.contentHash) {
-		return { name: input.name, contentHash: newHash, updated: false };
+	// Parse frontmatter to sync metadata
+	const { frontmatter } = parseFrontmatter(content);
+	let metadataSynced = false;
+
+	if (frontmatter) {
+		const updates: Partial<typeof skills.$inferInsert> = {};
+
+		if (frontmatter.title && frontmatter.title !== skillRecord.title) {
+			updates.title = frontmatter.title;
+			metadataSynced = true;
+		}
+		if (
+			frontmatter.description !== undefined &&
+			frontmatter.description !== skillRecord.description
+		) {
+			updates.description = frontmatter.description || null;
+			metadataSynced = true;
+		}
+
+		// Sync tags from frontmatter
+		if (frontmatter.tags && frontmatter.tags.length > 0) {
+			const currentTags = await db
+				.select({ name: tags.name })
+				.from(skillTags)
+				.innerJoin(tags, eq(skillTags.tagId, tags.id))
+				.where(eq(skillTags.skillId, skillRecord.id));
+
+			const currentTagNames = new Set(currentTags.map((t) => t.name));
+			const frontmatterTagNames = new Set(frontmatter.tags);
+
+			// Check if tags changed
+			const tagsChanged =
+				currentTagNames.size !== frontmatterTagNames.size ||
+				[...currentTagNames].some((t) => !frontmatterTagNames.has(t));
+
+			if (tagsChanged) {
+				// Remove old tags
+				await db.delete(skillTags).where(eq(skillTags.skillId, skillRecord.id));
+
+				// Add new tags
+				const tagMap = await getOrCreateTags(db, frontmatter.tags);
+				await db
+					.insert(skillTags)
+					.values(
+						Array.from(tagMap.values()).map((tagId) => ({
+							skillId: skillRecord.id,
+							tagId,
+						})),
+					)
+					.onConflictDoNothing();
+
+				metadataSynced = true;
+			}
+		}
+
+		if (Object.keys(updates).length > 0) {
+			updates.updatedAt = sql`(CURRENT_TIMESTAMP)` as unknown as string;
+			await db.update(skills).set(updates).where(eq(skills.id, skillRecord.id));
+		}
+	}
+
+	if (newHash === skillRecord.contentHash && !metadataSynced) {
+		return {
+			name: input.name,
+			contentHash: newHash,
+			updated: false,
+			metadataSynced: false,
+		};
 	}
 
 	await db
@@ -320,7 +410,12 @@ export async function syncSkill(
 		})
 		.where(eq(skills.id, skillRecord.id));
 
-	return { name: input.name, contentHash: newHash, updated: true };
+	return {
+		name: input.name,
+		contentHash: newHash,
+		updated: newHash !== skillRecord.contentHash,
+		metadataSynced,
+	};
 }
 
 export async function searchSkills(
@@ -340,16 +435,11 @@ export async function searchSkills(
 		offset = cursorData.offset;
 	}
 
-	let query = db
-		.selectDistinct({
-			id: skills.id,
-			name: skills.name,
-			title: skills.title,
-			description: skills.description,
-			filePath: skills.filePath,
-		})
-		.from(skills);
+	// Build conditions array (always starts with soft delete filter)
+	const conditions: ReturnType<typeof eq>[] = [isNull(skills.deletedAt)];
 
+	// Build tag IDs if needed
+	let tagIds: number[] = [];
 	if (input.tags && input.tags.length > 0) {
 		const tagResults = await db
 			.select({ id: tags.id })
@@ -362,17 +452,36 @@ export async function searchSkills(
 			return { skills: [], suggestedTags };
 		}
 
-		const tagIds = tagResults.map((t) => t.id);
+		tagIds = tagResults.map((t) => t.id);
 		tagIdsToIncrement.push(...tagIds);
-
-		query = query
-			.innerJoin(skillTags, eq(skills.id, skillTags.skillId))
-			.where(inArray(skillTags.tagId, tagIds)) as unknown as typeof query;
 	}
 
+	// Add query condition
 	if (input.query) {
-		const condition = like(skills.title, `%${input.query}%`);
-		query = query.where(condition) as unknown as typeof query;
+		conditions.push(like(skills.title, `%${input.query}%`));
+	}
+
+	// Build query for results
+	let query = db
+		.selectDistinct({
+			id: skills.id,
+			name: skills.name,
+			title: skills.title,
+			description: skills.description,
+			filePath: skills.filePath,
+			executionLogId: skills.executionLogId,
+		})
+		.from(skills);
+
+	// Apply tag join and all conditions
+	if (tagIds.length > 0) {
+		query = query
+			.innerJoin(skillTags, eq(skills.id, skillTags.skillId))
+			.where(
+				and(inArray(skillTags.tagId, tagIds), ...conditions),
+			) as unknown as typeof query;
+	} else {
+		query = query.where(and(...conditions)) as unknown as typeof query;
 	}
 
 	// Apply ordering
@@ -419,6 +528,7 @@ export async function searchSkills(
 				tags: skillTagsResult.map((t) => t.name),
 				filePath: skill.filePath,
 				hasStaleDeps,
+				executionLogId: skill.executionLogId,
 			};
 		}),
 	);
@@ -485,9 +595,12 @@ export async function getSkill(
 		})
 		.where(eq(skills.id, skillRecord.id));
 
-	const content = (await fileExists(skillRecord.filePath))
+	const rawContent = (await fileExists(skillRecord.filePath))
 		? await readTextFile(skillRecord.filePath)
 		: "";
+
+	// Extract body without frontmatter for cleaner output
+	const content = extractBody(rawContent);
 
 	const skillTagsResult = await db
 		.select({ name: tags.name })
@@ -530,6 +643,7 @@ export async function getSkill(
 		title: skillRecord.title,
 		content,
 		tags: skillTagsResult.map((t) => t.name),
+		executionLogId: skillRecord.executionLogId,
 		references: {
 			skills: skillSkillsResult.map((s) => ({
 				name: s.name,
@@ -561,9 +675,12 @@ export async function getSkill(
 
 				// biome-ignore lint/style/noNonNullAssertion: guaranteed
 				const refPath = refSkill[0]!.filePath;
-				const content = (await fileExists(refPath))
+				const rawContent = (await fileExists(refPath))
 					? await readTextFile(refPath)
 					: "";
+
+				// Extract body without frontmatter
+				const content = extractBody(rawContent);
 
 				return { name: s.name, content };
 			}),
@@ -711,15 +828,25 @@ export async function registerSkillFromFile(
 	const content = await readTextFile(relativeFilePath);
 	const contentHash = computeHash(content);
 
-	const titleMatch = content.match(/^#\s+(.+)$/m);
-	const title = titleMatch?.[1]?.trim() ?? name;
+	// Parse frontmatter for metadata
+	const { frontmatter, body } = parseFrontmatter(content);
+
+	// Get title from frontmatter, or fallback to first heading, or filename
+	let title = frontmatter?.title;
+	if (!title) {
+		const titleMatch = body.match(/^#\s+(.+)$/m);
+		title = titleMatch?.[1]?.trim() ?? name;
+	}
+
+	const description = frontmatter?.description;
 
 	// Store relative path in DB
 	const result = await db
 		.insert(skills)
 		.values({
-			name,
+			name: frontmatter?.name ?? name,
 			title,
+			description,
 			filePath: relativeFilePath,
 			contentHash,
 			needsReview: true,
@@ -730,7 +857,19 @@ export async function registerSkillFromFile(
 		return null;
 	}
 
-	return { id: result[0]!.id, name, isNew: true };
+	// biome-ignore lint/style/noNonNullAssertion: guaranteed
+	const skillId = result[0]!.id;
+
+	// Add tags from frontmatter if present
+	if (frontmatter?.tags && frontmatter.tags.length > 0) {
+		const tagMap = await getOrCreateTags(db, frontmatter.tags);
+		await db
+			.insert(skillTags)
+			.values(Array.from(tagMap.values()).map((tagId) => ({ skillId, tagId })))
+			.onConflictDoNothing();
+	}
+
+	return { id: skillId, name: frontmatter?.name ?? name, isNew: true };
 }
 
 /**
@@ -821,7 +960,7 @@ export async function migrateSkillPaths(
 
 export async function deleteSkills(
 	db: DB,
-	input: { names: string[]; deleteFiles?: boolean },
+	input: { names: string[]; deleteFiles?: boolean; soft?: boolean },
 ): Promise<{ deleted: number; filesDeleted: number }> {
 	if (input.names.length === 0) {
 		return { deleted: 0, filesDeleted: 0 };
@@ -830,7 +969,9 @@ export async function deleteSkills(
 	const skillRecords = await db
 		.select({ id: skills.id, name: skills.name, filePath: skills.filePath })
 		.from(skills)
-		.where(inArray(skills.name, input.names));
+		.where(
+			and(inArray(skills.name, input.names), sql`${skills.deletedAt} IS NULL`),
+		);
 
 	if (skillRecords.length === 0) {
 		return { deleted: 0, filesDeleted: 0 };
@@ -838,7 +979,17 @@ export async function deleteSkills(
 
 	const skillIds = skillRecords.map((s) => s.id);
 
-	// Delete junction table entries
+	// Soft delete: set deletedAt timestamp
+	if (input.soft) {
+		const result = await db
+			.update(skills)
+			.set({ deletedAt: sql`(CURRENT_TIMESTAMP)` as unknown as string })
+			.where(inArray(skills.id, skillIds))
+			.returning({ id: skills.id });
+		return { deleted: result.length, filesDeleted: 0 };
+	}
+
+	// Hard delete: remove junction table entries first
 	await db.delete(skillTags).where(inArray(skillTags.skillId, skillIds));
 	await db.delete(skillSkills).where(inArray(skillSkills.skillId, skillIds));
 	await db
@@ -872,4 +1023,235 @@ export async function deleteSkills(
 	}
 
 	return { deleted: result.length, filesDeleted };
+}
+
+export async function restoreSkills(
+	db: DB,
+	names: string[],
+): Promise<{ restored: number }> {
+	if (names.length === 0) {
+		return { restored: 0 };
+	}
+
+	const result = await db
+		.update(skills)
+		.set({ deletedAt: null })
+		.where(
+			and(inArray(skills.name, names), sql`${skills.deletedAt} IS NOT NULL`),
+		)
+		.returning({ id: skills.id });
+
+	return { restored: result.length };
+}
+
+/**
+ * Get a dependency graph for a skill, showing all connected skills, resources, and facts.
+ * Traverses the graph up to maxDepth levels deep.
+ */
+export async function getDependencyGraph(
+	db: DB,
+	input: SkillDependencyGraphInput,
+): Promise<SkillDependencyGraphOutput> {
+	const maxDepth = input.maxDepth ?? 3;
+	const includeContent = input.includeContent ?? false;
+
+	// Get the root skill
+	const rootSkill = await db
+		.select()
+		.from(skills)
+		.where(eq(skills.name, input.skillName))
+		.limit(1);
+
+	if (rootSkill.length === 0) {
+		throw new Error(`Skill not found: ${input.skillName}`);
+	}
+
+	// biome-ignore lint/style/noNonNullAssertion: guaranteed
+	const root = rootSkill[0]!;
+
+	// Get root tags
+	const rootTags = await db
+		.select({ name: tags.name })
+		.from(skillTags)
+		.innerJoin(tags, eq(skillTags.tagId, tags.id))
+		.where(eq(skillTags.skillId, root.id));
+
+	// Get root content if needed
+	let rootContent: string | undefined;
+	if (includeContent && (await fileExists(root.filePath))) {
+		const rawContent = await readTextFile(root.filePath);
+		rootContent = extractBody(rawContent);
+	}
+
+	// Track visited nodes to avoid cycles
+	const visitedSkills = new Set<number>([root.id]);
+	const visitedResources = new Set<number>();
+	const visitedFacts = new Set<number>();
+
+	type Node = {
+		type: "skill" | "resource" | "fact";
+		id: number | string;
+		name: string;
+		title?: string;
+		content?: string;
+		isStale?: boolean;
+		depth: number;
+	};
+
+	type Edge = {
+		from: string;
+		to: string;
+		relation: string;
+	};
+
+	const nodes: Node[] = [];
+	const edges: Edge[] = [];
+	let staleCount = 0;
+	let maxDepthReached = 0;
+
+	// BFS traversal
+	const queue: { skillId: number; skillName: string; depth: number }[] = [
+		{ skillId: root.id, skillName: root.name, depth: 0 },
+	];
+
+	while (queue.length > 0) {
+		const current = queue.shift()!;
+		maxDepthReached = Math.max(maxDepthReached, current.depth);
+
+		// Get skill's direct references
+		// 1. Referenced skills
+		const refSkills = await db
+			.select({
+				id: skills.id,
+				name: skills.name,
+				title: skills.title,
+				filePath: skills.filePath,
+				relation: skillSkills.relationType,
+			})
+			.from(skillSkills)
+			.innerJoin(skills, eq(skillSkills.referencedSkillId, skills.id))
+			.where(eq(skillSkills.skillId, current.skillId));
+
+		for (const refSkill of refSkills) {
+			edges.push({
+				from: `skill:${current.skillName}`,
+				to: `skill:${refSkill.name}`,
+				relation: refSkill.relation,
+			});
+
+			if (!visitedSkills.has(refSkill.id)) {
+				visitedSkills.add(refSkill.id);
+
+				let content: string | undefined;
+				if (includeContent && (await fileExists(refSkill.filePath))) {
+					const rawContent = await readTextFile(refSkill.filePath);
+					content = extractBody(rawContent);
+				}
+
+				nodes.push({
+					type: "skill",
+					id: refSkill.id,
+					name: refSkill.name,
+					title: refSkill.title,
+					content,
+					depth: current.depth + 1,
+				});
+
+				// Continue traversing if within depth limit
+				if (current.depth + 1 < maxDepth) {
+					queue.push({
+						skillId: refSkill.id,
+						skillName: refSkill.name,
+						depth: current.depth + 1,
+					});
+				}
+			}
+		}
+
+		// 2. Referenced resources
+		const refResources = await db
+			.select({
+				id: resources.id,
+				uri: resources.uri,
+				snapshot: resources.snapshot,
+				currentHash: resources.snapshotHash,
+				linkHash: skillResources.snapshotHashAtLink,
+			})
+			.from(skillResources)
+			.innerJoin(resources, eq(skillResources.resourceId, resources.id))
+			.where(eq(skillResources.skillId, current.skillId));
+
+		for (const refResource of refResources) {
+			edges.push({
+				from: `skill:${current.skillName}`,
+				to: `resource:${refResource.id}`,
+				relation: "references",
+			});
+
+			if (!visitedResources.has(refResource.id)) {
+				visitedResources.add(refResource.id);
+				const isStale = refResource.currentHash !== refResource.linkHash;
+				if (isStale) staleCount++;
+
+				nodes.push({
+					type: "resource",
+					id: refResource.id,
+					name: refResource.uri,
+					content: includeContent
+						? (refResource.snapshot ?? undefined)
+						: undefined,
+					isStale,
+					depth: current.depth + 1,
+				});
+			}
+		}
+
+		// 3. Referenced facts
+		const refFacts = await db
+			.select({
+				id: facts.id,
+				content: facts.content,
+			})
+			.from(skillFacts)
+			.innerJoin(facts, eq(skillFacts.factId, facts.id))
+			.where(eq(skillFacts.skillId, current.skillId));
+
+		for (const refFact of refFacts) {
+			edges.push({
+				from: `skill:${current.skillName}`,
+				to: `fact:${refFact.id}`,
+				relation: "references",
+			});
+
+			if (!visitedFacts.has(refFact.id)) {
+				visitedFacts.add(refFact.id);
+
+				nodes.push({
+					type: "fact",
+					id: refFact.id,
+					name: `Fact #${refFact.id}`,
+					content: includeContent ? refFact.content : undefined,
+					depth: current.depth + 1,
+				});
+			}
+		}
+	}
+
+	return {
+		root: {
+			name: root.name,
+			title: root.title,
+			tags: rootTags.map((t) => t.name),
+			content: rootContent,
+		},
+		nodes,
+		edges,
+		summary: {
+			totalSkills: visitedSkills.size - 1, // Exclude root
+			totalResources: visitedResources.size,
+			totalFacts: visitedFacts.size,
+			staleCount,
+			maxDepthReached,
+		},
+	};
 }

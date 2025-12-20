@@ -1,3 +1,10 @@
+---
+name: staleness-management
+title: "Managing Staleness in Factsets"
+description: "How staleness detection and refresh cycles work"
+tags: ["staleness", "maintenance", "factsets"]
+updated: 2025-12-20
+---
 # Managing Staleness in Factsets
 
 ## Overview
@@ -22,7 +29,7 @@ Staleness detection helps agents know when their cached knowledge is outdated.
 
 ```typescript
 const result = await checkStale(db, {
-  staleDays: 7,
+  maxAgeHours: 168,
   checkResources: true,
   checkSkills: true,
   checkFacts: true
@@ -34,14 +41,14 @@ Returns:
 ```typescript
 {
   staleResources: [{
-    id, uri, type, daysStale, lastVerifiedAt,
+    id, uri, type, hoursStale, lastVerifiedAt,
     retrievalMethod  // Agent uses this to refresh
   }],
   staleSkills: [{
     name, reason, staleDependencies: [{ type, name }]
   }],
   unverifiedFacts: [{
-    id, content, daysOld, sourceType
+    id, content, hoursOld, sourceType
   }],
   summary: { resources, skills, facts, totalStale }
 }
@@ -78,7 +85,7 @@ Returns:
 Use the `maintenance_report` prompt for a formatted overview:
 
 ```typescript
-await server.getPrompt("maintenance_report", { staleDays: "7" });
+await server.getPrompt("maintenance_report", { maxAgeHours: "168" });
 ```
 
 Returns markdown with actionable sections for stale items.

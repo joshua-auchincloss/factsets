@@ -1,7 +1,7 @@
 # Factsets Agent Workflow
 
 Factsets is an MCP server providing persistent knowledge storage: **facts** (atomic statements), **resources** (cached
-external content), **skills** (procedural markdown), and **tags** (categorization).
+external content), **skills** (procedural markdown), **execution logs** (command history), and **tags** (categorization).
 
 ## Getting Started
 
@@ -10,11 +10,13 @@ conceptual overview explaining the design philosophy.
 
 ## Workflow Phases
 
-1. **Discover** - `list_tags` at session start
-1. **Retrieve** - `search_facts`/`search_skills` by relevant tags
-1. **Execute** - Perform task
-1. **Contribute** - `submit_facts`/`create_skill` from learnings
+1. **Discover** - `list_tags` at session start, `search_skills` for domain
+1. **Retrieve** - `get_skill` / `build_skill_context` for procedures
+1. **Execute** - Perform task, log commands with `submit_execution_logs`
+1. **Contribute** - `create_skill` (link execution log!) / `submit_facts`
 1. **Maintain** - `check_stale` periodically (not every session)
+
+**Core Principle:** Skills are the primary knowledge unit. Facts support skills. Execution logs validate skills.
 
 ## Discovery
 
@@ -114,18 +116,86 @@ update_fact {
 
 ### Skills
 
-Create for multi-step procedures or patterns spanning multiple facts.
+Create for multi-step procedures or patterns spanning multiple facts. **For command-based skills, always link the execution log that validated the procedure.**
 
 ````json
 create_skill {
   "name": "run-tests",
   "title": "Running Tests",
   "content": "# Running Tests\n\n```bash\nbun test\n```",
-  "tags": ["testing"]
+  "tags": ["testing"],
+  "executionLogId": 42
 }
 ````
 
+**Best Practice:** When a command succeeds, log it first, then create the skill referencing that log:
+
+```json
+// 1. Run and log the command
+submit_execution_logs { "logs": [{
+  "command": "bun test",
+  "workingDirectory": "./",
+  "context": "Verified test command works",
+  "output": "✓ 42 tests passed",
+  "exitCode": 0,
+  "success": true,
+  "durationMs": 3500
+}]}
+// Returns: { "logs": [{ "id": 42, ... }] }
+
+// 2. Create skill linked to the execution
+create_skill {
+  "name": "run-tests",
+  "title": "Running Tests",
+  "content": "...",
+  "tags": ["testing"],
+  "executionLogId": 42
+}
+```
+
+This allows **skill re-validation** by re-running the linked command.
+
 Skill files are automatically synced when modified (via the file watcher). If auto-sync is disabled, manually call `sync_skill { "name": "run-tests" }` after editing. Use `update_skill` for metadata/tags/references only.
+
+### Execution Logs
+
+**Log every successful command, migration, test run, or build.** This creates institutional memory for what works.
+
+```json
+submit_execution_logs { "logs": [{
+  "command": "bun drizzle-kit generate",
+  "workingDirectory": "./",
+  "context": "Generated migration after adding execution_logs table",
+  "output": "1 migration generated",
+  "exitCode": 0,
+  "success": true,
+  "durationMs": 1200,
+  "skillName": "database-migrations",
+  "tags": ["database", "migrations"]
+}]}
+```
+
+**When to log:**
+- Command succeeds and should be remembered
+- Migration runs successfully
+- Test suite passes with specific configuration
+- Build completes with notable settings
+- Any reusable procedure is validated
+
+**Search execution history:**
+
+```json
+// Find what worked before
+search_execution_logs { "query": "drizzle", "success": true }
+
+// Check skill validation history
+search_execution_logs { "skillName": "run-tests", "limit": 10 }
+
+// Filter by tags
+search_execution_logs { "tags": ["database"], "success": true }
+```
+
+**Re-validate skills:** When a skill has an `executionLogId`, use `get_execution_log` to retrieve the original command and re-run it to verify the procedure still works.
 
 ### Resources
 
@@ -265,9 +335,14 @@ bunx factsets restore backup.json
 | Find skills          | `search_skills`             | `tags`, `query`, `limit`, `orderBy`                                         |
 | Get skill            | `get_skill`                 | `name`, `hydrateRefs`                                                       |
 | Build skill context  | `build_skill_context`       | `name`, `includeRefs`                                                       |
-| Create skill         | `create_skill`              | `name`, `title`, `content`, `tags`                                          |
+| Create skill         | `create_skill`              | `name`, `title`, `content`, `tags`, `executionLogId`                        |
+| Update skill         | `update_skill`              | `name`, `title`, `description`, `tags`, `executionLogId`                    |
 | Sync skill           | `sync_skill`                | `name`                                                                      |
 | Delete skills        | `delete_skills`             | `names`, `deleteFiles`                                                      |
+| **Execution Logs**   |                             |                                                                             |
+| Log executions       | `submit_execution_logs`     | `logs[]` with `command`, `success`, `output`, `exitCode`, `tags`            |
+| Search logs          | `search_execution_logs`     | `query`, `success`, `skillName`, `tags`, `limit`, `orderBy`                 |
+| Get log              | `get_execution_log`         | `id`                                                                        |
 | **Maintenance**      |                             |                                                                             |
 | Check staleness      | `check_stale`               | `maxAgeHours`                                                               |
 | Maintenance report   | `get_maintenance_report`    | `maxAgeHours`                                                               |

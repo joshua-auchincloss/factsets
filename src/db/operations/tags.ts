@@ -103,7 +103,12 @@ export async function getOrCreateTags(
 
 	await db
 		.insert(tags)
-		.values(uniqueNames.map((name) => ({ name })))
+		.values(
+			uniqueNames.map((name) => ({
+				name,
+				description: `Auto-created tag for ${name}`,
+			})),
+		)
 		.onConflictDoNothing();
 
 	const results = await db

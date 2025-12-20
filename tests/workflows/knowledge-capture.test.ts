@@ -28,7 +28,10 @@ describe("knowledge capture workflow", () => {
 				tags: [
 					{ name: "react", description: "React framework concepts" },
 					{ name: "hooks", description: "React hooks patterns" },
-					{ name: "state-management" },
+					{
+						name: "state-management",
+						description: "State management patterns and approaches",
+					},
 				],
 			});
 

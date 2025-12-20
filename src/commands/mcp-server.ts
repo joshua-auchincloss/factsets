@@ -10,6 +10,7 @@ import { registerSkillTools } from "../tools/skills.js";
 import { registerContextTools } from "../tools/context.js";
 import { registerConfigTools } from "../tools/config.js";
 import { registerPromptTools } from "../tools/prompts.js";
+import { registerExecutionLogTools } from "../tools/execution-logs.js";
 import { registerKnowledgePrompts } from "../prompts/knowledge.js";
 import { registerMaintenancePrompts } from "../prompts/maintenance.js";
 import { setRuntimeConfig } from "../runtime-config.js";
@@ -103,6 +104,7 @@ export const mcpServerHandler = async (
 	registerContextTools(server, db);
 	registerConfigTools(server, db);
 	registerPromptTools(server, db);
+	registerExecutionLogTools(server, db);
 
 	registerStaticPrompts(server);
 	registerKnowledgePrompts(server, db);

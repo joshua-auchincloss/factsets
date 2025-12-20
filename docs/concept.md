@@ -9,6 +9,7 @@ AI agents face fundamental limitations:
 1. **No persistent learning** - Corrections and insights vanish after sessions
 1. **Resource amnesia** - Repeatedly fetch same docs, re-read same files
 1. **Skill degradation** - Trial-and-error improvements aren't captured
+1. **No execution memory** - Successful commands forgotten, same mistakes repeated
 
 ## Core Philosophy
 
@@ -111,6 +112,37 @@ skills/
 
 ...the relevant skill file should be updated with the new understanding.
 
+### Execution Logs
+
+Persistent records of commands, tests, builds, and other actions that agents perform.
+
+**Purpose:**
+- **Institutional memory** - Remember what commands worked
+- **Skill validation** - Link skills to the execution that proved they work
+- **Failure learning** - Track what didn't work to avoid repeating mistakes
+- **Re-validation** - Re-run logged commands to verify skills still work
+
+**Characteristics:**
+- Command and output captured
+- Success/failure status
+- Working directory context
+- Duration tracking
+- Optional skill linkage
+- Tagged for discovery
+
+**Examples:**
+- `bun test` → success, linked to `run-tests` skill
+- `bun drizzle-kit generate` → success, tagged `database`, `migrations`
+- `npm run build` → failure, output shows missing dependency
+
+**Workflow pattern:**
+```
+1. Agent runs command
+2. Command succeeds → log it with submit_execution_logs
+3. Create/update skill referencing the execution log
+4. Later: re-validate skill by re-running logged command
+```
+
 ### Tags
 
 Cross-cutting categorization system enabling discovery across all entity types.
@@ -192,8 +224,8 @@ Knowing when cached knowledge may be outdated.
 **Mechanisms:**
 
 - Content hash comparison (for resources)
-- Timestamp thresholds (configurable via `staleDays` or `staleHours`)
-- Configurable freshness thresholds (`freshnessThresholdHours` on resource retrieval)
+- Timestamp thresholds (configurable via `maxAgeHours`, default 168 = 7 days)
+- Configurable freshness on resource retrieval (`maxAgeHours` parameter)
 - Explicit invalidation (user or agent marks as stale)
 - Dependency tracking (skill depends on resource snapshot hash)
 
@@ -209,6 +241,7 @@ Factsets operates as an MCP server, exposing tools for self-maintenance.
 1. **Fact management** - Submit, search, update, delete facts
 1. **Resource management** - Add, refresh, search resources
 1. **Skill management** - Create, update, search skills
+1. **Execution log management** - Submit, search, retrieve command history
 1. **Tag management** - Create, list, search by tags
 1. **Context reconstruction** - Build context for a topic
 

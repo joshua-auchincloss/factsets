@@ -121,15 +121,15 @@ bunx factsets mcp-server --dry
 
 The following defaults apply to search operations:
 
-| Parameter    | Entity    | Default | Description                        |
-| ------------ | --------- | ------- | ---------------------------------- |
-| `limit`      | facts     | 50      | Maximum facts returned             |
-| `limit`      | resources | 100     | Maximum resources returned         |
-| `limit`      | skills    | 30      | Maximum skills returned            |
-| `limit`      | tags      | 100     | Maximum tags returned              |
-| `staleDays`  | staleness | 7       | Days before content is stale       |
-| `staleHours` | staleness | —       | Hours threshold (overrides days)   |
-| `freshnessThresholdHours` | resources | 1 | Hours for isFresh determination |
+| Parameter      | Entity    | Default | Description                           |
+| -------------- | --------- | ------- | ------------------------------------- |
+| `limit`        | facts     | 50      | Maximum facts returned                |
+| `limit`        | resources | 100     | Maximum resources returned            |
+| `limit`        | skills    | 30      | Maximum skills returned               |
+| `limit`        | tags      | 100     | Maximum tags returned                 |
+| `limit`        | exec logs | 50      | Maximum execution logs returned       |
+| `maxAgeHours`  | staleness | 168     | Hours before content is stale (7 days)|
+| `maxAgeHours`  | resources | 1       | Hours for isFresh determination       |
 
 ## System Seeding
 

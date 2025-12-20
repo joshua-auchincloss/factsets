@@ -4,6 +4,27 @@ CREATE TABLE `config` (
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `execution_log_tags` (
+	`execution_log_id` integer NOT NULL,
+	`tag_id` integer NOT NULL,
+	CONSTRAINT `execution_log_tags_pk` PRIMARY KEY(`execution_log_id`, `tag_id`),
+	CONSTRAINT `fk_execution_log_tags_execution_log_id_execution_logs_id_fk` FOREIGN KEY (`execution_log_id`) REFERENCES `execution_logs`(`id`) ON DELETE CASCADE,
+	CONSTRAINT `fk_execution_log_tags_tag_id_tags_id_fk` FOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`) ON DELETE CASCADE
+);
+--> statement-breakpoint
+CREATE TABLE `execution_logs` (
+	`id` integer PRIMARY KEY AUTOINCREMENT,
+	`command` text NOT NULL,
+	`working_directory` text,
+	`context` text,
+	`output` text,
+	`exit_code` integer,
+	`success` integer NOT NULL,
+	`duration_ms` integer,
+	`skill_name` text,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `fact_tags` (
 	`fact_id` integer NOT NULL,
 	`tag_id` integer NOT NULL,
@@ -23,7 +44,8 @@ CREATE TABLE `facts` (
 	`system_id` text UNIQUE,
 	`system_hash` text,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`deleted_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `resource_tags` (
@@ -46,7 +68,8 @@ CREATE TABLE `resources` (
 	`system_id` text UNIQUE,
 	`system_hash` text,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`deleted_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `skill_facts` (
@@ -98,22 +121,32 @@ CREATE TABLE `skills` (
 	`needs_review` integer DEFAULT 0 NOT NULL,
 	`system_id` text UNIQUE,
 	`system_hash` text,
+	`execution_log_id` integer,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`deleted_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `tags` (
 	`id` integer PRIMARY KEY AUTOINCREMENT,
 	`name` text NOT NULL UNIQUE,
-	`description` text,
+	`description` text NOT NULL,
 	`usage_count` integer DEFAULT 0 NOT NULL,
 	`system_id` text UNIQUE,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX `execution_logs_command_idx` ON `execution_logs` (`command`);--> statement-breakpoint
+CREATE INDEX `execution_logs_success_idx` ON `execution_logs` (`success`);--> statement-breakpoint
+CREATE INDEX `execution_logs_skill_name_idx` ON `execution_logs` (`skill_name`);--> statement-breakpoint
+CREATE INDEX `execution_logs_created_at_idx` ON `execution_logs` (`created_at`);--> statement-breakpoint
 CREATE INDEX `facts_content_idx` ON `facts` (`content`);--> statement-breakpoint
 CREATE INDEX `facts_source_type_idx` ON `facts` (`source_type`);--> statement-breakpoint
+CREATE INDEX `facts_deleted_at_idx` ON `facts` (`deleted_at`);--> statement-breakpoint
 CREATE INDEX `resources_uri_idx` ON `resources` (`uri`);--> statement-breakpoint
 CREATE INDEX `resources_type_idx` ON `resources` (`type`);--> statement-breakpoint
-CREATE INDEX `skills_name_idx` ON `skills` (`name`);
+CREATE INDEX `resources_deleted_at_idx` ON `resources` (`deleted_at`);--> statement-breakpoint
+CREATE INDEX `skills_name_idx` ON `skills` (`name`);--> statement-breakpoint
+CREATE INDEX `skills_deleted_at_idx` ON `skills` (`deleted_at`);--> statement-breakpoint
+CREATE INDEX `skills_execution_log_id_idx` ON `skills` (`execution_log_id`);

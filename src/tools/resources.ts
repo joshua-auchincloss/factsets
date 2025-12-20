@@ -8,6 +8,7 @@ import {
 	updateResourceSnapshot,
 	updateResourceSnapshots,
 	deleteResources,
+	restoreResources,
 } from "../db/operations/resources.js";
 import {
 	resourceAddInput,
@@ -17,6 +18,7 @@ import {
 	resourceUpdateSnapshotInput,
 	resourceUpdateSnapshotsInput,
 	resourceDeleteInput,
+	resourceRestoreInput,
 } from "../schemas/resources.js";
 
 export function registerResourceTools(server: McpServer, db: DB) {
@@ -129,6 +131,21 @@ export function registerResourceTools(server: McpServer, db: DB) {
 		},
 		async (params) => {
 			const result = await deleteResources(db, params);
+			return {
+				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+			};
+		},
+	);
+
+	server.registerTool(
+		"restore_resources",
+		{
+			description:
+				"Restore soft-deleted resources by their IDs. Returns the count of resources that were restored.",
+			inputSchema: resourceRestoreInput,
+		},
+		async ({ ids }) => {
+			const result = await restoreResources(db, ids);
 			return {
 				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
 			};

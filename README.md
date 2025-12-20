@@ -1,8 +1,14 @@
 # Factsets
 
+|         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package | ![NPM Downloads](https://img.shields.io/npm/dm/factsets?style=flat) ![NPM Version](https://img.shields.io/npm/v/factsets?style=flat)                                                                                                                                                                                                                                                                                                                                       |
+| CI/CD   | [![Release](https://github.com/joshua-auchincloss/factsets/actions/workflows/release.yaml/badge.svg)](https://github.com/joshua-auchincloss/factsets/actions) [![Tests](https://github.com/joshua-auchincloss/factsets/actions/workflows/test.yaml/badge.svg)](https://github.com/joshua-auchincloss/factsets/actions) [![codecov](https://codecov.io/gh/joshua-auchincloss/factsets/graph/badge.svg?token=IL8AIPFCX9)](https://codecov.io/gh/joshua-auchincloss/factsets) |
+
+
 A self-maintaining knowledge base for AI agents, exposed via the
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Manages **facts** (atomic knowledge), **resources**
-(cached external content), and **skills** (procedural markdown, file based) using SQLite.
+(cached external content), **skills** (procedural markdown), and **execution logs** (command history) using SQLite.
 
 ## Features
 
@@ -71,12 +77,13 @@ See [Configuration Guide](docs/config.md) for all options.
 
 ## Core Concepts
 
-| Concept       | Description                                                                      |
-| ------------- | -------------------------------------------------------------------------------- |
-| **Facts**     | Atomic knowledge units (1-3 sentences), tagged and timestamped                   |
-| **Resources** | External content (files, URLs, APIs) with cached snapshots and retrieval methods |
-| **Skills**    | Markdown documents for procedural knowledge, stored on filesystem                |
-| **Tags**      | Flexible categorization for all content types                                    |
+| Concept            | Description                                                                      |
+| ------------------ | -------------------------------------------------------------------------------- |
+| **Facts**          | Atomic knowledge units (1-3 sentences), tagged and timestamped                   |
+| **Resources**      | External content (files, URLs, APIs) with cached snapshots and retrieval methods |
+| **Skills**         | Markdown documents for procedural knowledge, stored on filesystem                |
+| **Execution Logs** | Command history with success/failure tracking for skill validation               |
+| **Tags**           | Flexible categorization for all content types                                    |
 
 ## MCP Tools
 
@@ -101,6 +108,9 @@ See [Configuration Guide](docs/config.md) for all options.
 | `link_skill`                | Link skill to facts/resources/skills      |
 | `sync_skill`                | Sync skill after file edit                |
 | `delete_skills`             | Remove skills                             |
+| `submit_execution_logs`     | Record command/test/build executions      |
+| `search_execution_logs`     | Find executions by query, tags, success   |
+| `get_execution_log`         | Get execution details by ID               |
 | `check_stale`               | Find stale resources and dependencies     |
 | `mark_resources_refreshed`  | Mark resources as current                 |
 | `create_tags`               | Create organizational tags                |

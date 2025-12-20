@@ -331,11 +331,11 @@ Get a specific resource with its snapshot.
 
 **Parameters:**
 
-| Name                      | Type    | Required | Default | Description                                 |
-| ------------------------- | ------- | -------- | ------- | ------------------------------------------- |
-| `id`                      | integer | \*       |         | Resource ID                                 |
-| `uri`                     | string  | \*       |         | Resource URI                                |
-| `freshnessThresholdHours` | integer |          | 1       | Hours threshold for `isFresh` determination |
+| Name          | Type    | Required | Default | Description                                      |
+| ------------- | ------- | -------- | ------- | ------------------------------------------------ |
+| `id`          | integer | \*       |         | Resource ID                                      |
+| `uri`         | string  | \*       |         | Resource URI                                     |
+| `maxAgeHours` | integer |          | 1       | Hours before content is considered stale         |
 
 \*One of `id` or `uri` is required.
 
@@ -416,17 +416,18 @@ Create a skill document.
 
 **Parameters:**
 
-| Name                   | Type      | Required | Description                                             |
-| ---------------------- | --------- | -------- | ------------------------------------------------------- |
-| `name`                 | string    | ✓        | Unique identifier (lowercase, alphanumeric with dashes) |
-| `title`                | string    | ✓        | Human-readable title                                    |
-| `description`          | string    |          | Brief description                                       |
-| `content`              | string    | ✓        | Markdown content                                        |
-| `tags`                 | string[]  | ✓        | Tags for categorization                                 |
-| `references`           | object    |          | Initial references                                      |
-| `references.skills`    | string[]  |          | Names of related skills                                 |
-| `references.resources` | integer[] |          | Resource IDs                                            |
-| `references.facts`     | integer[] |          | Fact IDs                                                |
+| Name                   | Type      | Required | Description                                              |
+| ---------------------- | --------- | -------- | -------------------------------------------------------- |
+| `name`                 | string    | ✓        | Unique identifier (lowercase, alphanumeric with dashes)  |
+| `title`                | string    | ✓        | Human-readable title                                     |
+| `description`          | string    |          | Brief description                                        |
+| `content`              | string    | ✓        | Markdown content                                         |
+| `tags`                 | string[]  | ✓        | Tags for categorization                                  |
+| `references`           | object    |          | Initial references                                       |
+| `references.skills`    | string[]  |          | Names of related skills                                  |
+| `references.resources` | integer[] |          | Resource IDs                                             |
+| `references.facts`     | integer[] |          | Fact IDs                                                 |
+| `executionLogId`       | integer   |          | ID of execution log that validated this skill            |
 
 **Example:**
 
@@ -439,7 +440,8 @@ Create a skill document.
   "references": {
     "skills": ["docker-basics"],
     "resources": [1, 2]
-  }
+  },
+  "executionLogId": 42
 }
 ```
 
@@ -450,14 +452,15 @@ directly.
 
 **Parameters:**
 
-| Name          | Type     | Required | Description               |
-| ------------- | -------- | -------- | ------------------------- |
-| `name`        | string   | ✓        | Skill name                |
-| `title`       | string   |          | New title                 |
-| `description` | string   |          | New description           |
-| `tags`        | string[] |          | Replace all tags          |
-| `appendTags`  | string[] |          | Add tags (keeps existing) |
-| `references`  | object   |          | Modify references         |
+| Name             | Type     | Required | Description                                   |
+| ---------------- | -------- | -------- | --------------------------------------------- |
+| `name`           | string   | ✓        | Skill name                                    |
+| `title`          | string   |          | New title                                     |
+| `description`    | string   |          | New description                               |
+| `tags`           | string[] |          | Replace all tags                              |
+| `appendTags`     | string[] |          | Add tags (keeps existing)                     |
+| `references`     | object   |          | Modify references                             |
+| `executionLogId` | integer  |          | ID of execution log that validated this skill |
 
 **Reference Updates:**
 
@@ -554,6 +557,110 @@ Add references from a skill to other entities.
 | `linkResources`         | integer[] |          | Resource IDs to link                 |
 | `linkFacts`             | integer[] |          | Fact IDs to link                     |
 
+## Execution Logs
+
+Persistent records of commands, tests, builds, and other actions. Enables institutional memory for what works.
+
+### `submit_execution_logs`
+
+Submit one or more execution logs.
+
+**Parameters:**
+
+| Name                      | Type      | Required | Description                                           |
+| ------------------------- | --------- | -------- | ----------------------------------------------------- |
+| `logs`                    | array     | ✓        | Array of execution log objects                        |
+| `logs[].command`          | string    | ✓        | The command or action that was executed               |
+| `logs[].success`          | boolean   | ✓        | Whether the execution succeeded                       |
+| `logs[].workingDirectory` | string    |          | Working directory where command was run               |
+| `logs[].context`          | string    |          | What was being attempted (free text for searchability)|
+| `logs[].output`           | string    |          | The output (stdout/stderr) from the execution         |
+| `logs[].exitCode`         | integer   |          | Exit code from the command                            |
+| `logs[].durationMs`       | integer   |          | How long the execution took in milliseconds           |
+| `logs[].skillName`        | string    |          | The skill this execution relates to                   |
+| `logs[].tags`             | string[]  |          | Tags for categorization                               |
+
+**Example:**
+
+```json
+{
+  "logs": [{
+    "command": "bun test",
+    "workingDirectory": "./",
+    "context": "Verified test command works",
+    "output": "✓ 42 tests passed",
+    "exitCode": 0,
+    "success": true,
+    "durationMs": 3500,
+    "skillName": "run-tests",
+    "tags": ["testing"]
+  }]
+}
+```
+
+**Returns:**
+
+```json
+{
+  "created": 1,
+  "ids": [42]
+}
+```
+
+### `search_execution_logs`
+
+Search execution logs by tags, query, success status, or skill name.
+
+**Parameters:**
+
+| Name        | Type     | Required | Default  | Description                                     |
+| ----------- | -------- | -------- | -------- | ----------------------------------------------- |
+| `tags`      | string[] |          |          | Filter by tags                                  |
+| `query`     | string   |          |          | Free text search in command, context, output    |
+| `success`   | boolean  |          |          | Filter by success status                        |
+| `skillName` | string   |          |          | Filter by related skill name                    |
+| `limit`     | integer  |          | 50       | Maximum results                                 |
+| `cursor`    | string   |          |          | Pagination cursor                               |
+| `orderBy`   | enum     |          | "recent" | Sort order: "recent", "oldest"                  |
+
+**Example:**
+
+```json
+// Find successful database commands
+{ "query": "drizzle", "success": true, "tags": ["database"] }
+
+// Check validation history for a skill
+{ "skillName": "run-tests", "success": true }
+```
+
+### `get_execution_log`
+
+Get a specific execution log by ID.
+
+**Parameters:**
+
+| Name | Type    | Required | Description           |
+| ---- | ------- | -------- | --------------------- |
+| `id` | integer | ✓        | Execution log ID      |
+
+**Returns:**
+
+```json
+{
+  "id": 42,
+  "command": "bun test",
+  "workingDirectory": "./",
+  "context": "Running unit tests",
+  "output": "✓ 42 tests passed",
+  "exitCode": 0,
+  "success": true,
+  "durationMs": 3500,
+  "skillName": "run-tests",
+  "tags": ["testing"],
+  "createdAt": "2024-01-15T10:30:00Z"
+}
+```
+
 ## Maintenance
 
 ### `check_stale`
@@ -562,16 +669,16 @@ Check for stale content needing attention.
 
 **Parameters:**
 
-| Name             | Type    | Required | Default | Description                                           |
-| ---------------- | ------- | -------- | ------- | ----------------------------------------------------- |
-| `checkResources` | boolean |          | true    | Check resources                                       |
-| `checkSkills`    | boolean |          | true    | Check skills                                          |
-| `checkFacts`     | boolean |          | true    | Check facts                                           |
-| `maxHageHours`     | integer |          |         | More precise threshold in hours (overrides staleDays) |
+| Name             | Type    | Required | Default | Description                                               |
+| ---------------- | ------- | -------- | ------- | --------------------------------------------------------- |
+| `checkResources` | boolean |          | true    | Check resources                                           |
+| `checkSkills`    | boolean |          | true    | Check skills                                              |
+| `checkFacts`     | boolean |          | true    | Check facts                                               |
+| `maxAgeHours`    | integer |          | 168     | Hours before content is considered stale (default: 7 days)|
 
 **Returns:**
 
-- `staleResources`: Resources not verified recently (includes `maxHageHours`, retrieval methods)
+- `staleResources`: Resources not verified recently (includes hours stale, retrieval methods)
 - `staleSkills`: Skills with stale dependencies
 - `unverifiedFacts`: Old unverified facts
 - `summary`: Counts by category
@@ -638,11 +745,11 @@ Generate a maintenance report.
 
 **Arguments:**
 
-| Name        | Type   | Required | Default | Description             |
-| ----------- | ------ | -------- | ------- | ----------------------- |
-| `staleDays` | string |          | "7"     | Stale threshold in days |
+| Name          | Type   | Required | Default | Description               |
+| ------------- | ------ | -------- | ------- | ------------------------- |
+| `maxAgeHours` | string |          | "168"   | Stale threshold in hours  |
 
-**Tool equivalent:** `get_maintenance_report` (takes number for `staleDays`)
+**Tool equivalent:** `get_maintenance_report` (takes number for `maxAgeHours`)
 
 **Returns:** Formatted report with:
 
@@ -670,12 +777,12 @@ These tools provide the same functionality as prompts but with:
 - Structured JSON output including both markdown and metadata
 - Better programmatic integration for agents
 
-| Tool                     | Prompt Equivalent    | Key Differences                                      |
-| ------------------------ | -------------------- | ---------------------------------------------------- |
-| `get_knowledge_context`  | `knowledge_context`  | `tags` as array, returns `{ markdown, data }`        |
-| `build_skill_context`    | `recall_skill`       | `includeRefs` as boolean, returns `{ markdown, found }` |
-| `get_maintenance_report` | `maintenance_report` | `staleHours` as number, returns `{ markdown, summary }` |
-| `get_refresh_guide`      | `refresh_guide`      | `resourceId` as number, returns `{ markdown, found }` |
+| Tool                     | Prompt Equivalent    | Key Differences                                          |
+| ------------------------ | -------------------- | -------------------------------------------------------- |
+| `get_knowledge_context`  | `knowledge_context`  | `tags` as array, returns `{ markdown, data }`            |
+| `build_skill_context`    | `recall_skill`       | `includeRefs` as boolean, returns `{ markdown, found }`  |
+| `get_maintenance_report` | `maintenance_report` | `maxAgeHours` as number, returns `{ markdown, summary }` |
+| `get_refresh_guide`      | `refresh_guide`      | `resourceId` as number, returns `{ markdown, found }`    |
 
 ## Static Guide Tools
 
@@ -718,7 +825,22 @@ Skills are saved as markdown files. The directory varies by client:
 1. `create_tags` for new categories
 2. `submit_facts` for atomic knowledge
 3. `add_resources` for external references
-4. `create_skill` for procedural knowledge
+4. `create_skill` for procedural knowledge (link `executionLogId` for command-based skills!)
+
+### Recording Command History
+
+1. Run a command successfully
+2. `submit_execution_logs` to record what worked
+3. `create_skill` or `update_skill` with `executionLogId` to link the validation
+4. Later: `search_execution_logs` to find what worked before
+
+### Re-validating Skills
+
+1. `get_skill` to retrieve skill with `executionLogId`
+2. `get_execution_log` to get the original command
+3. Re-run the command to verify it still works
+4. `submit_execution_logs` with fresh results
+5. `update_skill` to link the new execution log
 
 ### Maintaining Knowledge
 

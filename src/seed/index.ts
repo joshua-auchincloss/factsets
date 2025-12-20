@@ -104,10 +104,12 @@ async function seedTags(
 					.where(eq(tags.name, seedTag.name));
 				updated++;
 			} else {
-				// Create new tag
+				// Create new tag - description is required
+				const tagDescription =
+					seedTag.description ?? `Auto-generated tag for ${seedTag.name}`;
 				await db.insert(tags).values({
 					name: seedTag.name,
-					description: seedTag.description,
+					description: tagDescription,
 					systemId: seedTag.systemId,
 				});
 				created++;

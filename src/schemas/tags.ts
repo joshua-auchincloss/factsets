@@ -11,7 +11,10 @@ export const tagCreateInput = z.object({
 		.array(
 			z.object({
 				name: z.string().min(1),
-				description: z.string().optional(),
+				description: z
+					.string()
+					.min(1)
+					.describe("Required description for the tag"),
 			}),
 		)
 		.min(1),
@@ -20,7 +23,7 @@ export const tagCreateInput = z.object({
 export const tagOutput = z.object({
 	id: z.number(),
 	name: z.string(),
-	description: z.string().nullable(),
+	description: z.string(),
 	usageCount: z.number(),
 });
 

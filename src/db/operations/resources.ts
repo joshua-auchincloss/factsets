@@ -1,4 +1,14 @@
-import { eq, like, sql, inArray, lt, desc, asc } from "drizzle-orm";
+import {
+	eq,
+	like,
+	sql,
+	inArray,
+	lt,
+	desc,
+	asc,
+	and,
+	isNull,
+} from "drizzle-orm";
 import type { DB } from "../index.js";
 import { resources, resourceTags, tags, skillResources } from "../schema.js";
 import {
@@ -135,6 +145,9 @@ export async function searchResources(
 		offset = cursorData.offset;
 	}
 
+	// Build conditions array (always starts with soft delete filter)
+	const conditions: ReturnType<typeof eq>[] = [isNull(resources.deletedAt)];
+
 	if (input.tags && input.tags.length > 0) {
 		const tagResults = await db
 			.select({ id: tags.id })
@@ -151,6 +164,16 @@ export async function searchResources(
 		tagIdsToIncrement.push(...tagIds);
 	}
 
+	// Add type filter
+	if (input.type) {
+		conditions.push(eq(resources.type, input.type));
+	}
+
+	// Add URI pattern filter
+	if (input.uriPattern) {
+		conditions.push(like(resources.uri, `%${input.uriPattern}%`));
+	}
+
 	// Build query for results
 	let query = db
 		.selectDistinct({
@@ -162,21 +185,15 @@ export async function searchResources(
 		})
 		.from(resources);
 
-	// Apply tag join if needed
+	// Apply tag join and all conditions
 	if (tagIds.length > 0) {
 		query = query
 			.innerJoin(resourceTags, eq(resources.id, resourceTags.resourceId))
-			.where(inArray(resourceTags.tagId, tagIds)) as unknown as typeof query;
-	}
-
-	if (input.type) {
-		const typeCondition = eq(resources.type, input.type);
-		query = query.where(typeCondition) as unknown as typeof query;
-	}
-
-	if (input.uriPattern) {
-		const uriCondition = like(resources.uri, `%${input.uriPattern}%`);
-		query = query.where(uriCondition) as unknown as typeof query;
+			.where(
+				and(inArray(resourceTags.tagId, tagIds), ...conditions),
+			) as unknown as typeof query;
+	} else {
+		query = query.where(and(...conditions)) as unknown as typeof query;
 	}
 
 	// Apply ordering
@@ -497,9 +514,12 @@ export async function getResourceById(db: DB, id: number) {
 
 export async function deleteResources(
 	db: DB,
-	input: { ids?: number[]; uris?: string[] },
+	input: { ids?: number[]; uris?: string[]; soft?: boolean },
 ): Promise<{ deleted: number }> {
 	const conditions = [];
+
+	// Exclude already deleted resources
+	conditions.push(sql`${resources.deletedAt} IS NULL`);
 
 	if (input.ids && input.ids.length > 0) {
 		conditions.push(inArray(resources.id, input.ids));
@@ -509,19 +529,22 @@ export async function deleteResources(
 		conditions.push(inArray(resources.uri, input.uris));
 	}
 
-	if (conditions.length === 0) {
+	if (conditions.length <= 1) {
 		return { deleted: 0 };
 	}
+
+	// Build the where condition
+	const idOrUriCondition =
+		conditions.length === 2
+			? conditions[1]
+			: sql`(${conditions[1]} OR ${conditions[2]})`;
+	const fullCondition = and(conditions[0], idOrUriCondition);
 
 	// Find all matching resources first
 	const matchingResources = await db
 		.select({ id: resources.id })
 		.from(resources)
-		.where(
-			conditions.length === 1
-				? conditions[0]
-				: sql`${conditions[0]} OR ${conditions[1]}`,
-		);
+		.where(fullCondition);
 
 	if (matchingResources.length === 0) {
 		return { deleted: 0 };
@@ -529,7 +552,17 @@ export async function deleteResources(
 
 	const resourceIds = matchingResources.map((r) => r.id);
 
-	// Delete from junction tables first
+	// Soft delete: set deletedAt timestamp
+	if (input.soft) {
+		const result = await db
+			.update(resources)
+			.set({ deletedAt: sql`(CURRENT_TIMESTAMP)` as unknown as string })
+			.where(inArray(resources.id, resourceIds))
+			.returning({ id: resources.id });
+		return { deleted: result.length };
+	}
+
+	// Hard delete: remove from junction tables first
 	await db
 		.delete(resourceTags)
 		.where(inArray(resourceTags.resourceId, resourceIds));
@@ -544,4 +577,23 @@ export async function deleteResources(
 		.returning({ id: resources.id });
 
 	return { deleted: result.length };
+}
+
+export async function restoreResources(
+	db: DB,
+	ids: number[],
+): Promise<{ restored: number }> {
+	if (ids.length === 0) {
+		return { restored: 0 };
+	}
+
+	const result = await db
+		.update(resources)
+		.set({ deletedAt: null })
+		.where(
+			and(inArray(resources.id, ids), sql`${resources.deletedAt} IS NOT NULL`),
+		)
+		.returning({ id: resources.id });
+
+	return { restored: result.length };
 }

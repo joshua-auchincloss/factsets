@@ -1,0 +1,11 @@
+[test]
+coverage = true
+coverageReporter = ["text", "lcov"]
+coveragePathIgnorePatterns = [
+  "tests/*.ts",
+  "tests/**/*.ts",
+  "**/*.spec.ts",
+  "**/*.test.ts",
+  "dist/**",
+  "build/**",
+]

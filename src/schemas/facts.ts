@@ -35,6 +35,22 @@ export const factDeleteInput = z.object({
 	tags: z.array(z.string()).optional(),
 	olderThan: z.string().datetime().optional(),
 	unverifiedOnly: z.boolean().optional(),
+	soft: z
+		.boolean()
+		.default(false)
+		.optional()
+		.describe("If true, soft delete (set deletedAt) instead of hard delete"),
+});
+
+export const factRestoreInput = z.object({
+	ids: z
+		.array(z.number().int().positive())
+		.min(1)
+		.describe("IDs of soft-deleted facts to restore"),
+});
+
+export const factRestoreOutput = z.object({
+	restored: z.number().describe("Number of facts restored"),
 });
 
 export const factUpdateInput = z
@@ -128,5 +144,7 @@ export type FactVerifyInput = z.infer<typeof factVerifyInput>;
 export type FactDeleteInput = z.infer<typeof factDeleteInput>;
 export type FactUpdateInput = z.infer<typeof factUpdateInput>;
 export type FactVerifyByTagsInput = z.infer<typeof factVerifyByTagsInput>;
+export type FactRestoreInput = z.infer<typeof factRestoreInput>;
 export type FactSubmitOutput = z.infer<typeof factSubmitOutput>;
 export type FactSearchOutput = z.infer<typeof factSearchOutput>;
+export type FactRestoreOutput = z.infer<typeof factRestoreOutput>;

@@ -16,7 +16,7 @@ export const config = sqliteTable("config", {
 export const tags = sqliteTable("tags", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	name: text("name").notNull().unique(),
-	description: text("description"),
+	description: text("description").notNull(),
 	usageCount: integer("usage_count").default(0).notNull(),
 	systemId: text("system_id").unique(),
 	createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
@@ -37,10 +37,12 @@ export const facts = sqliteTable(
 		systemHash: text("system_hash"),
 		createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 		updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+		deletedAt: text("deleted_at"),
 	},
 	(table) => [
 		index("facts_content_idx").on(table.content),
 		index("facts_source_type_idx").on(table.sourceType),
+		index("facts_deleted_at_idx").on(table.deletedAt),
 	],
 );
 
@@ -77,10 +79,12 @@ export const resources = sqliteTable(
 		systemHash: text("system_hash"),
 		createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 		updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+		deletedAt: text("deleted_at"),
 	},
 	(table) => [
 		index("resources_uri_idx").on(table.uri),
 		index("resources_type_idx").on(table.type),
+		index("resources_deleted_at_idx").on(table.deletedAt),
 	],
 );
 
@@ -113,10 +117,17 @@ export const skills = sqliteTable(
 			.notNull(),
 		systemId: text("system_id").unique(),
 		systemHash: text("system_hash"),
+		// Optional: execution log that validated this skill (for command-based skills)
+		executionLogId: integer("execution_log_id"),
 		createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 		updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+		deletedAt: text("deleted_at"),
 	},
-	(table) => [index("skills_name_idx").on(table.name)],
+	(table) => [
+		index("skills_name_idx").on(table.name),
+		index("skills_deleted_at_idx").on(table.deletedAt),
+		index("skills_execution_log_id_idx").on(table.executionLogId),
+	],
 );
 
 export const skillTags = sqliteTable(
@@ -176,4 +187,48 @@ export const skillFacts = sqliteTable(
 		createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 	},
 	(table) => [primaryKey({ columns: [table.skillId, table.factId] })],
+);
+
+// Execution logs - records of commands, tests, builds, experiments
+export const executionLogs = sqliteTable(
+	"execution_logs",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		// The command or action that was executed
+		command: text("command").notNull(),
+		// Working directory where it was run
+		workingDirectory: text("working_directory"),
+		// What we were trying to achieve (free text context)
+		context: text("context"),
+		// The output (stdout/stderr combined)
+		output: text("output"),
+		// Exit code (null for non-command actions)
+		exitCode: integer("exit_code"),
+		// Simple success/failure flag for easy filtering
+		success: integer("success", { mode: "boolean" }).notNull(),
+		// Duration in milliseconds (if tracked)
+		durationMs: integer("duration_ms"),
+		// Optional: the skill this execution relates to
+		skillName: text("skill_name"),
+		createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+	},
+	(table) => [
+		index("execution_logs_command_idx").on(table.command),
+		index("execution_logs_success_idx").on(table.success),
+		index("execution_logs_skill_name_idx").on(table.skillName),
+		index("execution_logs_created_at_idx").on(table.createdAt),
+	],
+);
+
+export const executionLogTags = sqliteTable(
+	"execution_log_tags",
+	{
+		executionLogId: integer("execution_log_id")
+			.notNull()
+			.references(() => executionLogs.id, { onDelete: "cascade" }),
+		tagId: integer("tag_id")
+			.notNull()
+			.references(() => tags.id, { onDelete: "cascade" }),
+	},
+	(table) => [primaryKey({ columns: [table.executionLogId, table.tagId] })],
 );

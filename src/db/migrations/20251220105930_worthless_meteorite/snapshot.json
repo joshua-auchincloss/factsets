@@ -1,11 +1,19 @@
 {
 	"version": "7",
 	"dialect": "sqlite",
-	"id": "c83d3fa7-a4e5-4167-aa83-5e734ce32edf",
+	"id": "e03b6c91-9c04-48a5-aafd-042c80b73a0e",
 	"prevIds": ["00000000-0000-0000-0000-000000000000"],
 	"ddl": [
 		{
 			"name": "config",
+			"entityType": "tables"
+		},
+		{
+			"name": "execution_log_tags",
+			"entityType": "tables"
+		},
+		{
+			"name": "execution_logs",
 			"entityType": "tables"
 		},
 		{
@@ -77,6 +85,126 @@
 			"name": "updated_at",
 			"entityType": "columns",
 			"table": "config"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "execution_log_id",
+			"entityType": "columns",
+			"table": "execution_log_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "tag_id",
+			"entityType": "columns",
+			"table": "execution_log_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": true,
+			"default": null,
+			"generated": null,
+			"name": "id",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "command",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "working_directory",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "context",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "output",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "exit_code",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "success",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "duration_ms",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "skill_name",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "execution_logs"
 		},
 		{
 			"type": "integer",
@@ -205,6 +333,16 @@
 			"default": "(CURRENT_TIMESTAMP)",
 			"generated": null,
 			"name": "updated_at",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "deleted_at",
 			"entityType": "columns",
 			"table": "facts"
 		},
@@ -345,6 +483,16 @@
 			"default": "(CURRENT_TIMESTAMP)",
 			"generated": null,
 			"name": "updated_at",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "deleted_at",
 			"entityType": "columns",
 			"table": "resources"
 		},
@@ -589,6 +737,16 @@
 			"table": "skills"
 		},
 		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "execution_log_id",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
 			"type": "text",
 			"notNull": true,
 			"autoincrement": false,
@@ -605,6 +763,16 @@
 			"default": "(CURRENT_TIMESTAMP)",
 			"generated": null,
 			"name": "updated_at",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "deleted_at",
 			"entityType": "columns",
 			"table": "skills"
 		},
@@ -630,7 +798,7 @@
 		},
 		{
 			"type": "text",
-			"notNull": false,
+			"notNull": true,
 			"autoincrement": false,
 			"default": null,
 			"generated": null,
@@ -677,6 +845,28 @@
 			"name": "updated_at",
 			"entityType": "columns",
 			"table": "tags"
+		},
+		{
+			"columns": ["execution_log_id"],
+			"tableTo": "execution_logs",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_execution_log_tags_execution_log_id_execution_logs_id_fk",
+			"entityType": "fks",
+			"table": "execution_log_tags"
+		},
+		{
+			"columns": ["tag_id"],
+			"tableTo": "tags",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_execution_log_tags_tag_id_tags_id_fk",
+			"entityType": "fks",
+			"table": "execution_log_tags"
 		},
 		{
 			"columns": ["fact_id"],
@@ -811,6 +1001,13 @@
 			"table": "skill_tags"
 		},
 		{
+			"columns": ["execution_log_id", "tag_id"],
+			"nameExplicit": false,
+			"name": "execution_log_tags_pk",
+			"entityType": "pks",
+			"table": "execution_log_tags"
+		},
+		{
 			"columns": ["fact_id", "tag_id"],
 			"nameExplicit": false,
 			"name": "fact_tags_pk",
@@ -862,6 +1059,13 @@
 		{
 			"columns": ["id"],
 			"nameExplicit": false,
+			"name": "execution_logs_pk",
+			"table": "execution_logs",
+			"entityType": "pks"
+		},
+		{
+			"columns": ["id"],
+			"nameExplicit": false,
 			"name": "facts_pk",
 			"table": "facts",
 			"entityType": "pks"
@@ -890,6 +1094,62 @@
 		{
 			"columns": [
 				{
+					"value": "command",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_command_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
+					"value": "success",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_success_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
+					"value": "skill_name",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_skill_name_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
+					"value": "created_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_created_at_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
 					"value": "content",
 					"isExpression": false
 				}
@@ -912,6 +1172,20 @@
 			"where": null,
 			"origin": "manual",
 			"name": "facts_source_type_idx",
+			"entityType": "indexes",
+			"table": "facts"
+		},
+		{
+			"columns": [
+				{
+					"value": "deleted_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "facts_deleted_at_idx",
 			"entityType": "indexes",
 			"table": "facts"
 		},
@@ -946,6 +1220,20 @@
 		{
 			"columns": [
 				{
+					"value": "deleted_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "resources_deleted_at_idx",
+			"entityType": "indexes",
+			"table": "resources"
+		},
+		{
+			"columns": [
+				{
 					"value": "name",
 					"isExpression": false
 				}
@@ -954,6 +1242,34 @@
 			"where": null,
 			"origin": "manual",
 			"name": "skills_name_idx",
+			"entityType": "indexes",
+			"table": "skills"
+		},
+		{
+			"columns": [
+				{
+					"value": "deleted_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "skills_deleted_at_idx",
+			"entityType": "indexes",
+			"table": "skills"
+		},
+		{
+			"columns": [
+				{
+					"value": "execution_log_id",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "skills_execution_log_id_idx",
 			"entityType": "indexes",
 			"table": "skills"
 		},

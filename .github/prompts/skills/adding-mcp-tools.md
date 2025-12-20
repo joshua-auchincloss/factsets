@@ -1,3 +1,10 @@
+---
+name: adding-mcp-tools
+title: "Adding a New MCP Tool to Factsets"
+description: "Step-by-step guide for adding new MCP tools to factsets"
+tags: ["mcp-tools", "factsets", "architecture"]
+updated: 2025-12-20
+---
 # Adding a New MCP Tool to Factsets
 
 ## Overview

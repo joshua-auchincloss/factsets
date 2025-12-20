@@ -1,3 +1,10 @@
+---
+name: testing-factsets
+title: "Testing Factsets"
+description: "Guide to writing and running tests for factsets"
+tags: ["testing", "factsets", "best-practices"]
+updated: 2025-12-20
+---
 # Testing Factsets
 
 ## Overview

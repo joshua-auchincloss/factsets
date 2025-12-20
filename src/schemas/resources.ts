@@ -93,6 +93,11 @@ export const resourceDeleteInput = z
 	.object({
 		ids: z.array(z.number().int().positive()).optional(),
 		uris: z.array(z.string()).optional(),
+		soft: z
+			.boolean()
+			.default(false)
+			.optional()
+			.describe("If true, soft delete (set deletedAt) instead of hard delete"),
 	})
 	.refine(
 		(data) =>
@@ -101,6 +106,17 @@ export const resourceDeleteInput = z
 			message: "Either ids or uris must be provided",
 		},
 	);
+
+export const resourceRestoreInput = z.object({
+	ids: z
+		.array(z.number().int().positive())
+		.min(1)
+		.describe("IDs of soft-deleted resources to restore"),
+});
+
+export const resourceRestoreOutput = z.object({
+	restored: z.number().describe("Number of resources restored"),
+});
 
 export const resourceAddOutput = z.object({
 	created: z.number(),
@@ -170,7 +186,9 @@ export type ResourceUpdateSnapshotsInput = z.infer<
 	typeof resourceUpdateSnapshotsInput
 >;
 export type ResourceDeleteInput = z.infer<typeof resourceDeleteInput>;
+export type ResourceRestoreInput = z.infer<typeof resourceRestoreInput>;
 export type ResourceAddOutput = z.infer<typeof resourceAddOutput>;
 export type ResourceSearchOutput = z.infer<typeof resourceSearchOutput>;
 export type ResourceGetOutput = z.infer<typeof resourceGetOutput>;
 export type ResourcesGetOutput = z.infer<typeof resourcesGetOutput>;
+export type ResourceRestoreOutput = z.infer<typeof resourceRestoreOutput>;
