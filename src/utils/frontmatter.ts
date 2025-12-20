@@ -152,7 +152,7 @@ export function generateFrontmatter(metadata: SkillFrontmatter): string {
  * Escape special characters for YAML strings.
  */
 function escapeYamlString(str: string): string {
-	return str.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+	return str.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
 }
 
 /**
