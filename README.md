@@ -5,7 +5,6 @@
 | Package | ![NPM Downloads](https://img.shields.io/npm/dm/factsets?style=flat) ![NPM Version](https://img.shields.io/npm/v/factsets?style=flat)                                                                                                                                                                                                                                                                                                                                       |
 | CI/CD   | [![Release](https://github.com/joshua-auchincloss/factsets/actions/workflows/release.yaml/badge.svg)](https://github.com/joshua-auchincloss/factsets/actions) [![Tests](https://github.com/joshua-auchincloss/factsets/actions/workflows/test.yaml/badge.svg)](https://github.com/joshua-auchincloss/factsets/actions) [![codecov](https://codecov.io/gh/joshua-auchincloss/factsets/graph/badge.svg?token=IL8AIPFCX9)](https://codecov.io/gh/joshua-auchincloss/factsets) |
 
-
 A self-maintaining knowledge base for AI agents, exposed via the
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Manages **facts** (atomic knowledge), **resources**
 (cached external content), **skills** (procedural markdown), and **execution logs** (command history) using SQLite.
