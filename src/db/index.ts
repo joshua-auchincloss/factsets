@@ -9,7 +9,6 @@ export type DB = ReturnType<typeof createConnection>;
 export function createConnection(databaseUrl: string) {
 	const path = databaseUrl.replace(/^sqlite:\/\//, "");
 	const db = new Database(path);
-	// @ts-expect-error
 	return drizzle({ schema, client: db });
 }
 
