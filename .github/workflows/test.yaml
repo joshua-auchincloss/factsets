@@ -40,4 +40,4 @@ jobs:
         run: bun test --coverage
 
       - name: Sanity Build
-        run: bun e2e
+        run: bash ./scripts/e2e_test.sh
