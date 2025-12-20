@@ -6,6 +6,15 @@
 	"main": "dist/main.js",
 	"types": "dist/main.d.ts",
 	"type": "module",
+	"authors": [
+		{
+			"name": "Joshua Auchincloss",
+			"email": "joshua.auchincloss@proton.me"
+		}
+	],
+	"repository": {
+		"url": "https://github.com/joshua-auchincloss/factsets"
+	},
 	"scripts": {
 		"clean": "rm -rf ./dist",
 		"build": "tsc -p tsconfig.build.json",
