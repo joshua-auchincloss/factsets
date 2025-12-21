@@ -37,7 +37,7 @@ Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, et
     factsets: {
       // `bunx`, `npx` or `pnpm dlx`
       command: "bunx",
-      args: ["factsets", "mcp-server"],
+      args: ["factsets"],
     },
   },
 }
@@ -46,23 +46,33 @@ Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, et
 Or run directly:
 
 ```bash
+# mcp-server is the default command
+bunx factsets
+
+# Explicit command also works
 bunx factsets mcp-server
 ```
 
 ### CLI Commands
 
 ```bash
-# Start MCP server (auto-watches skill files and seeds starter content by default)
+# Start MCP server (default command - auto-watches skill files and seeds starter content)
+bunx factsets [--database-url <path>] [--client <type>]
+
+# Explicit mcp-server command (same as above)
 bunx factsets mcp-server [--database-url <path>] [--client <type>]
 
 # Start without file watching
-bunx factsets mcp-server --no-watch-skills
+bunx factsets --no-watch-skills
 
 # Start without seeding starter content
-bunx factsets mcp-server --no-seed
+bunx factsets --no-seed
 
 # Run file watcher standalone
 bunx factsets watch-files [--database-url <path>]
+
+# Run background maintenance worker
+bunx factsets worker [--database-url <path>]
 
 # Export database to JSON
 bunx factsets dump backup.json
@@ -140,6 +150,7 @@ See [Configuration Guide](docs/config.md) for all options.
 | ------------------- | --------------------------- |
 | `create_tags`       | Create organizational tags  |
 | `list_tags`         | List tags with usage counts |
+| `update_tags`       | Update tag descriptions     |
 | `prune_orphan_tags` | Clean up unused orphan tags |
 
 ### Configuration
@@ -168,16 +179,20 @@ See [Configuration Guide](docs/config.md) for all options.
 | `get_maintenance_report` | Generate staleness/maintenance report            |
 | `get_refresh_guide`      | Get instructions for refreshing a resource       |
 | `get_agent_guide`        | Get the agent workflow guide (call first)        |
-| `get_concept_guide`   | Get conceptual overview and design philosophy    |
+| `get_concept_guide`      | Get conceptual overview and design philosophy    |
+| `get_config_guide`       | Get configuration guide with all options         |
 
 ## MCP Prompts
 
-| Prompt               | Description                        |
-| -------------------- | ---------------------------------- |
-| `knowledge_context`  | Build context from tags            |
-| `recall_skill`       | Get skill with references          |
-| `maintenance_report` | Staleness summary                  |
-| `refresh_guide`      | Instructions to refresh a resource |
+| Prompt               | Description                          |
+| -------------------- | ------------------------------------ |
+| `knowledge_context`  | Build context from tags              |
+| `recall_skill`       | Get skill with references            |
+| `maintenance_report` | Staleness summary                    |
+| `refresh_guide`      | Instructions to refresh a resource   |
+| `agent_guide`        | Agent workflow guide (call first)    |
+| `concept`            | Conceptual overview and philosophy   |
+| `config`             | Configuration guide with all options |
 
 ## Documentation
 

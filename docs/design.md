@@ -21,7 +21,7 @@ Add to your MCP client configuration:
   "mcpServers": {
     "factsets": {
       "command": "bunx",
-      "args": ["factsets", "mcp-server"]
+      "args": ["factsets"]
     }
   }
 }

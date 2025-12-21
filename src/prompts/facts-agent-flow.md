@@ -153,7 +153,7 @@ Skills are the primary unit. Facts support skills. Execution logs validate skill
 
 ## Configuration Overview
 
-Factsets is highly configurable. Use `get_config_schema` to see all options with types and defaults.
+Factsets is highly configurable. Use `get_config_guide` for comprehensive documentation, or `get_config_schema` to see all options with types and defaults.
 
 ### Key Configuration Categories
 
@@ -227,6 +227,9 @@ Do not change configuration without user acknowledgment. Explain what the change
 | Check stale      | `get_maintenance_report`   | `maxAgeHours`                                                 |
 | Mark fresh       | `mark_resources_refreshed` | `ids[]`                                                       |
 | Prune tags       | `prune_orphan_tags`        | `dryRun`                                                      |
+| Agent guide      | `get_agent_guide`          | (none)                                                        |
+| Config guide     | `get_config_guide`         | (none)                                                        |
+| Concept guide    | `get_concept_guide`        | (none)                                                        |
 
 ## Core Operations
 
