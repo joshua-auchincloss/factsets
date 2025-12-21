@@ -16,6 +16,8 @@ import {
 	incrementTagUsage,
 	getSuggestedTags,
 } from "./tags.js";
+import { expandTags, validateRequiredTags } from "./tag-relationships.js";
+import { getSearchLimit, getSearchIncludeDeleted } from "./config.js";
 import { decodeCursor, getNextCursor } from "../../utils/cursor.js";
 import type {
 	FactSubmitInput,
@@ -34,6 +36,16 @@ export async function submitFacts(
 ): Promise<FactSubmitOutput> {
 	if (input.facts.length === 0) {
 		return { created: 0, updated: 0, facts: [] };
+	}
+
+	// Validate required tags for each fact
+	for (const fact of input.facts) {
+		const validation = await validateRequiredTags(db, "facts", fact.tags);
+		if (!validation.valid) {
+			throw new Error(
+				`Required tags missing for fact: ${validation.missing.join(", ")}`,
+			);
+		}
 	}
 
 	const allTagNames = [...new Set(input.facts.flatMap((f) => f.tags))];
@@ -124,9 +136,14 @@ export async function searchFacts(
 	db: DB,
 	input: FactSearchInput,
 ): Promise<FactSearchOutput> {
-	const limit = input.limit ?? 50;
+	// Use config-based default limit if not provided
+	const configLimit = await getSearchLimit(db, "facts");
+	const limit = input.limit ?? configLimit;
 	const orderBy = input.orderBy ?? "recent";
 	const tagIdsToIncrement: number[] = [];
+
+	// Check if we should include soft-deleted items
+	const includeDeleted = await getSearchIncludeDeleted(db);
 
 	// Parse cursor for offset
 	let offset = 0;
@@ -138,16 +155,21 @@ export async function searchFacts(
 		offset = cursorData.offset;
 	}
 
-	// Build conditions array (always starts with soft delete filter)
-	const conditions: ReturnType<typeof eq>[] = [isNull(facts.deletedAt)];
+	// Build conditions array (filter soft deleted unless config says otherwise)
+	const conditions: ReturnType<typeof eq>[] = includeDeleted
+		? []
+		: [isNull(facts.deletedAt)];
 
-	// Build tag IDs if needed
+	// Build tag IDs if needed, with synonym/hierarchy expansion
 	let tagIds: number[] = [];
 	if (input.tags && input.tags.length > 0) {
+		// Expand tags using synonyms and hierarchies from config
+		const expandedTags = await expandTags(db, input.tags);
+
 		const tagResults = await db
 			.select({ id: tags.id })
 			.from(tags)
-			.where(inArray(tags.name, input.tags));
+			.where(inArray(tags.name, expandedTags));
 
 		if (tagResults.length === 0) {
 			// No matching tags - suggest popular ones
@@ -508,8 +530,8 @@ export async function updateFact(
 		.limit(1);
 
 	return {
-		success: true,
 		id: factId,
+		success: true,
 		content: finalFact[0]?.content ?? currentContent,
 		...(tagsAdded.length > 0 && { tagsAdded }),
 		...(tagsRemoved.length > 0 && { tagsRemoved }),

@@ -16,19 +16,230 @@ import {
 	incrementTagUsage,
 	getSuggestedTags,
 } from "./tags.js";
+import { expandTags, validateRequiredTags } from "./tag-relationships.js";
+import {
+	getSearchLimit,
+	getSearchIncludeDeleted,
+	getSnapshotMaxSizeKb,
+	getSnapshotOverflowBehavior,
+} from "./config.js";
 import { computeHash } from "../../utils/hash.js";
+import TurndownService from "turndown";
 import { nowISO, hoursAgoISO, secondsSince } from "../../utils/dates.js";
 import { decodeCursor, getNextCursor } from "../../utils/cursor.js";
+import {
+	inferResourceCategory,
+	getFreshnessForCategories,
+	type FreshnessCategory,
+} from "../../runtime-config.js";
 import type {
 	ResourceAddInput,
 	ResourceSearchInput,
 	ResourceGetInput,
 	ResourcesGetInput,
+	ResourceUpdateInput,
 	ResourceAddOutput,
 	ResourceSearchOutput,
 	ResourceGetOutput,
 	ResourcesGetOutput,
+	ResourceUpdateOutput,
 } from "../../schemas/resources.js";
+
+/**
+ * Overflow behavior specification from the agent
+ */
+interface OverflowBehavior {
+	behavior: "truncate" | "remove_noise" | "html_to_md" | "ignore";
+	noisePatterns?: string[];
+}
+
+/**
+ * Result of processing a snapshot with overflow handling
+ */
+interface SnapshotProcessResult {
+	snapshot: string | null;
+	needsResubmission: boolean;
+	currentSizeKb?: number;
+	maxSizeKb?: number;
+}
+
+/**
+ * Process a snapshot according to size limits and overflow behavior.
+ * If snapshot exceeds limit and no overflow behavior is specified,
+ * falls back to config-based default. If config default is 'auto' or 'summarize',
+ * returns needsResubmission=true so agent can decide how to handle.
+ */
+async function processSnapshot(
+	db: DB,
+	snapshot: string | null | undefined,
+	overflowBehavior?: OverflowBehavior,
+): Promise<SnapshotProcessResult> {
+	if (!snapshot) {
+		return { snapshot: null, needsResubmission: false };
+	}
+
+	const maxSizeKb = await getSnapshotMaxSizeKb(db);
+	const maxSizeBytes = maxSizeKb * 1024;
+	const snapshotBytes = Buffer.byteLength(snapshot, "utf8");
+	const currentSizeKb = Math.ceil(snapshotBytes / 1024);
+
+	// Under limit, return as-is
+	if (snapshotBytes <= maxSizeBytes) {
+		return { snapshot, needsResubmission: false };
+	}
+
+	// If no overflow behavior specified, check config default
+	let effectiveBehavior = overflowBehavior;
+	if (!effectiveBehavior) {
+		const configDefault = await getSnapshotOverflowBehavior(db);
+		// Config values 'summarize' and 'auto' mean we should ask the agent
+		if (configDefault === "summarize" || configDefault === "auto") {
+			return {
+				snapshot: null,
+				needsResubmission: true,
+				currentSizeKb,
+				maxSizeKb,
+			};
+		}
+		// Map config values to behavior
+		if (configDefault === "truncate") {
+			effectiveBehavior = { behavior: "truncate" };
+		} else if (configDefault === "remove_noise") {
+			// Config-based remove_noise uses default patterns
+			effectiveBehavior = {
+				behavior: "remove_noise",
+				noisePatterns: ["\\n{3,}", "[ \\t]+\\n", "^\\s+$"],
+			};
+		}
+	}
+
+	// Still no behavior after config check - request resubmission
+	if (!effectiveBehavior) {
+		return {
+			snapshot: null,
+			needsResubmission: true,
+			currentSizeKb,
+			maxSizeKb,
+		};
+	}
+
+	switch (effectiveBehavior.behavior) {
+		case "truncate":
+			// Simple truncation to max size, add marker
+			return {
+				snapshot: snapshot.slice(0, maxSizeBytes - 50) + "\n\n[...truncated]",
+				needsResubmission: false,
+			};
+
+		case "remove_noise": {
+			// Apply regex patterns to remove noise
+			let cleaned = snapshot;
+			if (effectiveBehavior.noisePatterns) {
+				for (const pattern of effectiveBehavior.noisePatterns) {
+					try {
+						const regex = new RegExp(pattern, "gm");
+						cleaned = cleaned.replace(regex, "");
+					} catch {
+						// Invalid regex, skip it
+					}
+				}
+			}
+			cleaned = cleaned.trim();
+
+			// If still too large after noise removal, request resubmission
+			if (Buffer.byteLength(cleaned, "utf8") > maxSizeBytes) {
+				return {
+					snapshot: null,
+					needsResubmission: true,
+					currentSizeKb: Math.ceil(Buffer.byteLength(cleaned, "utf8") / 1024),
+					maxSizeKb,
+				};
+			}
+			return { snapshot: cleaned, needsResubmission: false };
+		}
+
+		case "html_to_md": {
+			// Convert HTML to markdown using turndown
+			const turndown = new TurndownService({
+				headingStyle: "atx",
+				codeBlockStyle: "fenced",
+			});
+			const markdown = turndown.turndown(snapshot);
+
+			// Check if result fits within limit
+			if (Buffer.byteLength(markdown, "utf8") <= maxSizeBytes) {
+				return { snapshot: markdown, needsResubmission: false };
+			}
+
+			// Still too large after conversion, request resubmission
+			return {
+				snapshot: null,
+				needsResubmission: true,
+				currentSizeKb: Math.ceil(Buffer.byteLength(markdown, "utf8") / 1024),
+				maxSizeKb,
+			};
+		}
+
+		case "ignore":
+			// Store as-is regardless of size - agent has determined this is critical
+			return { snapshot, needsResubmission: false };
+
+		default:
+			return {
+				snapshot: null,
+				needsResubmission: true,
+				currentSizeKb,
+				maxSizeKb,
+			};
+	}
+}
+
+/**
+ * Generate an overflow prompt for the agent
+ */
+function generateOverflowPrompt(
+	uri: string,
+	currentSizeKb: number,
+	maxSizeKb: number,
+): {
+	uri: string;
+	currentSizeKb: number;
+	maxSizeKb: number;
+	message: string;
+	suggestedActions: Array<{
+		behavior: "truncate" | "remove_noise" | "html_to_md" | "ignore";
+		description: string;
+	}>;
+} {
+	return {
+		uri,
+		currentSizeKb,
+		maxSizeKb,
+		message: `Snapshot for resource "${uri}" exceeds the ${maxSizeKb}KB limit (current: ${currentSizeKb}KB). Please resubmit with one of the overflow behaviors, or provide a pre-summarized snapshot.`,
+		suggestedActions: [
+			{
+				behavior: "truncate" as const,
+				description:
+					"Simple truncation - keeps the first portion up to the size limit",
+			},
+			{
+				behavior: "remove_noise" as const,
+				description:
+					"Apply regex patterns to remove noise (e.g., comments, whitespace). Provide noisePatterns array with regex strings.",
+			},
+			{
+				behavior: "html_to_md" as const,
+				description:
+					"Convert HTML content to Markdown. Useful for web page snapshots where HTML markup adds significant overhead.",
+			},
+			{
+				behavior: "ignore" as const,
+				description:
+					"Store the full content regardless of size. Use for information-dense content where truncation would lose critical context.",
+			},
+		],
+	};
+}
 
 export async function addResources(
 	db: DB,
@@ -36,6 +247,20 @@ export async function addResources(
 ): Promise<ResourceAddOutput> {
 	if (input.resources.length === 0) {
 		return { created: 0, resources: [] };
+	}
+
+	// Validate required tags for each resource
+	for (const resource of input.resources) {
+		const validation = await validateRequiredTags(
+			db,
+			"resources",
+			resource.tags,
+		);
+		if (!validation.valid) {
+			throw new Error(
+				`Required tags missing for resource ${resource.uri}: ${validation.missing.join(", ")}`,
+			);
+		}
 	}
 
 	const allTagNames = [...new Set(input.resources.flatMap((r) => r.tags))];
@@ -59,13 +284,56 @@ export async function addResources(
 	);
 	const toInsert = input.resources.filter((r) => !existingUriMap.has(r.uri));
 
-	const insertValues = toInsert.map((resource) => {
-		const snapshot = resource.snapshot ?? null;
+	// Process snapshots with size limits, track overflow prompts
+	const overflowPrompts: Array<{
+		uri: string;
+		currentSizeKb: number;
+		maxSizeKb: number;
+		message: string;
+		suggestedActions: Array<{
+			behavior: "truncate" | "remove_noise" | "html_to_md" | "ignore";
+			description: string;
+		}>;
+	}> = [];
+
+	const processedResources: Array<{
+		resource: (typeof toInsert)[0];
+		snapshotResult: SnapshotProcessResult;
+	}> = [];
+
+	for (const resource of toInsert) {
+		const snapshotResult = await processSnapshot(
+			db,
+			resource.snapshot,
+			resource.overflowBehavior,
+		);
+
+		if (snapshotResult.needsResubmission) {
+			overflowPrompts.push(
+				generateOverflowPrompt(
+					resource.uri,
+					snapshotResult.currentSizeKb!,
+					snapshotResult.maxSizeKb!,
+				),
+			);
+		}
+
+		processedResources.push({ resource, snapshotResult });
+	}
+
+	// Only insert resources that don't need resubmission
+	const toActuallyInsert = processedResources.filter(
+		(p) => !p.snapshotResult.needsResubmission,
+	);
+
+	const insertValues = toActuallyInsert.map(({ resource, snapshotResult }) => {
+		const snapshot = snapshotResult.snapshot;
 		const snapshotHash = snapshot ? computeHash(snapshot) : null;
 
 		return {
 			uri: resource.uri,
 			type: resource.type,
+			description: resource.description,
 			snapshot,
 			snapshotHash,
 			retrievalMethod: resource.retrievalMethod ?? null,
@@ -101,7 +369,13 @@ export async function addResources(
 		}
 	}
 
-	const snapshotMap = new Map(toInsert.map((r) => [r.uri, !!r.snapshot]));
+	// Build snapshot map from processed results (not original inputs)
+	const snapshotMap = new Map(
+		toActuallyInsert.map(({ resource, snapshotResult }) => [
+			resource.uri,
+			!!snapshotResult.snapshot,
+		]),
+	);
 
 	const allResults = [
 		...insertedResources.map((r) => ({
@@ -121,19 +395,31 @@ export async function addResources(
 			}),
 	];
 
-	return {
+	const result: ResourceAddOutput = {
 		created: insertedResources.length,
 		resources: allResults,
 	};
+
+	// Include overflow prompts if any resources need resubmission
+	if (overflowPrompts.length > 0) {
+		result.overflowPrompts = overflowPrompts;
+	}
+
+	return result;
 }
 
 export async function searchResources(
 	db: DB,
 	input: ResourceSearchInput,
 ): Promise<ResourceSearchOutput> {
-	const limit = input.limit ?? 20;
+	// Use config-based default limit if not provided
+	const configLimit = await getSearchLimit(db, "resources");
+	const limit = input.limit ?? configLimit;
 	const tagIdsToIncrement: number[] = [];
 	let tagIds: number[] = [];
+
+	// Check if we should include soft-deleted items
+	const includeDeleted = await getSearchIncludeDeleted(db);
 
 	// Parse cursor for offset
 	let offset = 0;
@@ -145,14 +431,19 @@ export async function searchResources(
 		offset = cursorData.offset;
 	}
 
-	// Build conditions array (always starts with soft delete filter)
-	const conditions: ReturnType<typeof eq>[] = [isNull(resources.deletedAt)];
+	// Build conditions array (filter soft deleted unless config says otherwise)
+	const conditions: ReturnType<typeof eq>[] = includeDeleted
+		? []
+		: [isNull(resources.deletedAt)];
 
 	if (input.tags && input.tags.length > 0) {
+		// Expand tags using synonyms and hierarchies from config
+		const expandedTags = await expandTags(db, input.tags);
+
 		const tagResults = await db
 			.select({ id: tags.id })
 			.from(tags)
-			.where(inArray(tags.name, input.tags));
+			.where(inArray(tags.name, expandedTags));
 
 		if (tagResults.length === 0) {
 			// No matching tags - suggest popular ones
@@ -180,6 +471,7 @@ export async function searchResources(
 			id: resources.id,
 			uri: resources.uri,
 			type: resources.type,
+			description: resources.description,
 			snapshot: resources.snapshot,
 			lastVerifiedAt: resources.lastVerifiedAt,
 		})
@@ -236,14 +528,23 @@ export async function searchResources(
 				.innerJoin(tags, eq(resourceTags.tagId, tags.id))
 				.where(eq(resourceTags.resourceId, resource.id));
 
+			// Infer categories and use minimum threshold (strictest wins)
+			const categories = inferResourceCategory(
+				resource.uri,
+			) as FreshnessCategory[];
+			const freshnessThresholdHours = getFreshnessForCategories(categories);
+
 			return {
 				id: resource.id,
 				uri: resource.uri,
 				type: resource.type,
+				description: resource.description,
 				tags: resourceTagsResult.map((t) => t.name),
 				hasSnapshot: !!resource.snapshot,
 				snapshotPreview: resource.snapshot?.slice(0, 200) ?? "",
 				lastVerifiedAt: resource.lastVerifiedAt,
+				categories,
+				freshnessThresholdHours,
 			};
 		}),
 	);
@@ -294,8 +595,13 @@ export async function getResource(
 		? secondsSince(resource.lastVerifiedAt)
 		: 0;
 
-	// Use configurable maxAgeHours (default 1 hour = 3600 seconds)
-	const thresholdSeconds = (input.maxAgeHours ?? 1) * 3600;
+	// Infer categories and use minimum threshold (strictest wins)
+	const categories = inferResourceCategory(resource.uri) as FreshnessCategory[];
+	const freshnessThresholdHours = getFreshnessForCategories(categories);
+
+	// Use category-specific threshold, but allow override via maxAgeHours if provided
+	const effectiveThresholdHours = input.maxAgeHours ?? freshnessThresholdHours;
+	const thresholdSeconds = effectiveThresholdHours * 3600;
 
 	await db
 		.update(resources)
@@ -309,6 +615,8 @@ export async function getResource(
 		isFresh: snapshotAgeSeconds < thresholdSeconds,
 		snapshotAgeSeconds,
 		retrievalMethod: resource.retrievalMethod,
+		categories,
+		freshnessThresholdHours,
 	};
 }
 
@@ -316,9 +624,40 @@ export async function getResources(
 	db: DB,
 	input: ResourcesGetInput,
 ): Promise<ResourcesGetOutput> {
-	const thresholdSeconds = (input.maxAgeHours ?? 1) * 3600;
+	// maxAgeHours can be provided as override, otherwise we use per-resource category thresholds
+	const overrideMaxAgeHours = input.maxAgeHours;
 	const results: ResourcesGetOutput["resources"] = [];
 	const notFound: (number | string)[] = [];
+
+	// Helper to compute freshness for a resource
+	const computeResourceFreshness = (
+		resource: typeof resources.$inferSelect,
+	) => {
+		const snapshotAgeSeconds = resource.lastVerifiedAt
+			? secondsSince(resource.lastVerifiedAt)
+			: 0;
+
+		// Infer categories and use minimum threshold (strictest wins)
+		const categories = inferResourceCategory(
+			resource.uri,
+		) as FreshnessCategory[];
+		const freshnessThresholdHours = getFreshnessForCategories(categories);
+		const effectiveThresholdHours =
+			overrideMaxAgeHours ?? freshnessThresholdHours;
+		const thresholdSeconds = effectiveThresholdHours * 3600;
+
+		return {
+			id: resource.id,
+			uri: resource.uri,
+			type: resource.type,
+			content: resource.snapshot ?? "",
+			isFresh: snapshotAgeSeconds < thresholdSeconds,
+			snapshotAgeSeconds,
+			retrievalMethod: resource.retrievalMethod,
+			categories,
+			freshnessThresholdHours,
+		};
+	};
 
 	// Fetch by IDs
 	if (input.ids && input.ids.length > 0) {
@@ -335,19 +674,7 @@ export async function getResources(
 		}
 
 		for (const resource of found) {
-			const snapshotAgeSeconds = resource.lastVerifiedAt
-				? secondsSince(resource.lastVerifiedAt)
-				: 0;
-
-			results.push({
-				id: resource.id,
-				uri: resource.uri,
-				type: resource.type,
-				content: resource.snapshot ?? "",
-				isFresh: snapshotAgeSeconds < thresholdSeconds,
-				snapshotAgeSeconds,
-				retrievalMethod: resource.retrievalMethod,
-			});
+			results.push(computeResourceFreshness(resource));
 		}
 
 		// Increment retrieval counts
@@ -384,19 +711,7 @@ export async function getResources(
 				continue;
 			}
 
-			const snapshotAgeSeconds = resource.lastVerifiedAt
-				? secondsSince(resource.lastVerifiedAt)
-				: 0;
-
-			results.push({
-				id: resource.id,
-				uri: resource.uri,
-				type: resource.type,
-				content: resource.snapshot ?? "",
-				isFresh: snapshotAgeSeconds < thresholdSeconds,
-				snapshotAgeSeconds,
-				retrievalMethod: resource.retrievalMethod,
-			});
+			results.push(computeResourceFreshness(resource));
 		}
 
 		// Increment retrieval counts
@@ -420,14 +735,20 @@ export async function updateResourceSnapshot(
 	db: DB,
 	input: { id?: number; uri?: string; snapshot: string },
 ): Promise<void> {
-	const snapshotHash = computeHash(input.snapshot);
+	// Process snapshot with size limits - use truncate as default for updates
+	const result = await processSnapshot(db, input.snapshot, {
+		behavior: "truncate",
+	});
+	if (!result.snapshot) return;
+
+	const snapshotHash = computeHash(result.snapshot);
 	const now = nowISO();
 
 	if (input.id) {
 		await db
 			.update(resources)
 			.set({
-				snapshot: input.snapshot,
+				snapshot: result.snapshot,
 				snapshotHash,
 				lastVerifiedAt: now,
 				updatedAt: sql`(CURRENT_TIMESTAMP)`,
@@ -437,7 +758,7 @@ export async function updateResourceSnapshot(
 		await db
 			.update(resources)
 			.set({
-				snapshot: input.snapshot,
+				snapshot: result.snapshot,
 				snapshotHash,
 				lastVerifiedAt: now,
 				updatedAt: sql`(CURRENT_TIMESTAMP)`,
@@ -458,11 +779,17 @@ export async function updateResourceSnapshots(
 	let updated = 0;
 
 	for (const input of inputs) {
-		const snapshotHash = computeHash(input.snapshot);
+		// Process snapshot with size limits - use truncate as default for updates
+		const processResult = await processSnapshot(db, input.snapshot, {
+			behavior: "truncate",
+		});
+		if (!processResult.snapshot) continue;
+
+		const snapshotHash = computeHash(processResult.snapshot);
 		const result = await db
 			.update(resources)
 			.set({
-				snapshot: input.snapshot,
+				snapshot: processResult.snapshot,
 				snapshotHash,
 				lastVerifiedAt: now,
 				updatedAt: sql`(CURRENT_TIMESTAMP)`,
@@ -475,6 +802,84 @@ export async function updateResourceSnapshots(
 	}
 
 	return { updated };
+}
+
+export async function updateResource(
+	db: DB,
+	input: ResourceUpdateInput,
+): Promise<ResourceUpdateOutput> {
+	// Find the resource
+	let resourceRecord: typeof resources.$inferSelect | undefined;
+
+	if (input.id) {
+		const result = await db
+			.select()
+			.from(resources)
+			.where(eq(resources.id, input.id))
+			.limit(1);
+		resourceRecord = result[0];
+	} else if (input.uri) {
+		const result = await db
+			.select()
+			.from(resources)
+			.where(eq(resources.uri, input.uri))
+			.limit(1);
+		resourceRecord = result[0];
+	}
+
+	if (!resourceRecord) {
+		throw new Error(
+			`Resource not found: ${input.id ? `id=${input.id}` : `uri=${input.uri}`}`,
+		);
+	}
+
+	const resourceId = resourceRecord.id;
+
+	// Build update object - only metadata fields, NOT snapshot-related fields
+	const updates: Partial<typeof resources.$inferInsert> = {};
+
+	if (input.description !== undefined) {
+		updates.description = input.description;
+	}
+
+	if (input.retrievalMethod !== undefined) {
+		updates.retrievalMethod = input.retrievalMethod;
+	}
+
+	// Apply metadata updates if any
+	if (Object.keys(updates).length > 0) {
+		await db.update(resources).set(updates).where(eq(resources.id, resourceId));
+	}
+
+	// Handle tag replacement
+	if (input.tags) {
+		// Remove all existing tags
+		await db
+			.delete(resourceTags)
+			.where(eq(resourceTags.resourceId, resourceId));
+
+		// Add new tags
+		if (input.tags.length > 0) {
+			const tagMap = await getOrCreateTags(db, input.tags);
+			const tagValues = Array.from(tagMap.values()).map((tagId) => ({
+				resourceId,
+				tagId,
+			}));
+			await db.insert(resourceTags).values(tagValues).onConflictDoNothing();
+		}
+	}
+
+	// Handle tag append
+	if (input.appendTags?.length) {
+		const tagMap = await getOrCreateTags(db, input.appendTags);
+		const tagValues = Array.from(tagMap.values()).map((tagId) => ({
+			resourceId,
+			tagId,
+		}));
+		await db.insert(resourceTags).values(tagValues).onConflictDoNothing();
+	}
+
+	return { success: true, id: resourceId };
 }
 
 export async function getStaleResources(

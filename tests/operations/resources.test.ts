@@ -7,11 +7,11 @@ import {
 	getResources,
 	updateResourceSnapshot,
 	updateResourceSnapshots,
+	updateResource,
 	getStaleResources,
 	deleteResources,
 } from "../../src/db/operations/resources";
 import { setConfig } from "../../src/db/operations/config";
-import { encodeCursor } from "../../src/utils/cursor";
 
 describe("resources operations - extended coverage", () => {
 	let db: TestDB;
@@ -386,6 +386,160 @@ describe("resources operations - extended coverage", () => {
 		it("returns zero when no resources match", async () => {
 			const result = await deleteResources(db, { ids: [999999] });
 			expect(result.deleted).toBe(0);
+		});
+	});
+
+	describe("updateResource", () => {
+		it("updates description by id without touching snapshot timestamps", async () => {
+			const added = await addResources(db, {
+				resources: [
+					{
+						uri: "file:///test.ts",
+						type: "file",
+						tags: ["test"],
+						snapshot: "original content",
+					},
+				],
+			});
+
+			// Get original lastVerifiedAt
+			const original = await searchResources(db, { tags: ["test"] });
+			const originalLastVerified = original.resources[0]!.lastVerifiedAt;
+
+			// Wait a tiny bit to ensure timestamps would differ
+			await new Promise((resolve) => setTimeout(resolve, 10));
+
+			const result = await updateResource(db, {
+				id: added.resources[0]!.id,
+				description: "Updated description",
+			});
+
+			expect(result.success).toBe(true);
+
+			const updated = await searchResources(db, { tags: ["test"] });
+			expect(updated.resources[0]!.description).toBe("Updated description");
+			expect(updated.resources[0]!.lastVerifiedAt).toBe(originalLastVerified);
+		});
+
+		it("updates description by uri", async () => {
+			await addResources(db, {
+				resources: [
+					{
+						uri: "file:///test.ts",
+						type: "file",
+						tags: ["test"],
+						description: "Old description",
+					},
+				],
+			});
+
+			const result = await updateResource(db, {
+				uri: "file:///test.ts",
+				description: "New description",
+			});
+
+			expect(result.success).toBe(true);
+
+			const updated = await searchResources(db, { tags: ["test"] });
+			expect(updated.resources[0]!.description).toBe("New description");
+		});
+
+		it("replaces all tags when tags array provided", async () => {
+			await addResources(db, {
+				resources: [
+					{
+						uri: "file:///test.ts",
+						type: "file",
+						tags: ["old-tag", "another-old"],
+					},
+				],
+			});
+
+			await updateResource(db, {
+				uri: "file:///test.ts",
+				tags: ["new-tag", "fresh-tag"],
+			});
+
+			const updated = await searchResources(db, { tags: ["new-tag"] });
+			expect(updated.resources).toHaveLength(1);
+			expect(updated.resources[0]!.tags).toContain("new-tag");
+			expect(updated.resources[0]!.tags).toContain("fresh-tag");
+			expect(updated.resources[0]!.tags).not.toContain("old-tag");
+		});
+
+		it("appends tags without removing existing ones", async () => {
+			await addResources(db, {
+				resources: [
+					{
+						uri: "file:///test.ts",
+						type: "file",
+						tags: ["existing"],
+					},
+				],
+			});
+
+			await updateResource(db, {
+				uri: "file:///test.ts",
+				appendTags: ["appended"],
+			});
+
+			const updated = await searchResources(db, { tags: ["existing"] });
+			expect(updated.resources[0]!.tags).toContain("existing");
+			expect(updated.resources[0]!.tags).toContain("appended");
+		});
+
+		it("updates retrieval method", async () => {
+			await addResources(db, {
+				resources: [
+					{
+						uri: "file:///test.ts",
+						type: "file",
+						tags: ["test"],
+					},
+				],
+			});
+
+			await updateResource(db, {
+				uri: "file:///test.ts",
+				retrievalMethod: { type: "command", command: "cat test.ts" },
+			});
+
+			const resource = await getResource(db, { uri: "file:///test.ts" });
+			expect(resource!.retrievalMethod).toEqual({
+				type: "command",
+				command: "cat test.ts",
+			});
+		});
+
+		it("throws error for nonexistent resource", async () => {
+			await expect(
+				updateResource(db, {
+					id: 999999,
+					description: "Should fail",
+				}),
+			).rejects.toThrow("Resource not found");
+		});
+
+		it("does not modify snapshot or snapshotHash", async () => {
+			const added = await addResources(db, {
+				resources: [
+					{
+						uri: "file:///test.ts",
+						type: "file",
+						tags: ["test"],
+						snapshot: "original content",
+					},
+				],
+			});
+
+			await updateResource(db, {
+				id: added.resources[0]!.id,
+				description: "Updated description",
+				tags: ["new-tag"],
+			});
+
+			const resource = await getResource(db, { uri: "file:///test.ts" });
+			expect(resource!.content).toBe("original content");
 		});
 	});
 });

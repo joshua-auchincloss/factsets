@@ -9,7 +9,6 @@ import {
 	verifyFactsByTags,
 } from "../../src/db/operations/facts";
 import { setConfig } from "../../src/db/operations/config";
-import { encodeCursor } from "../../src/utils/cursor";
 
 describe("facts operations - extended coverage", () => {
 	let db: TestDB;

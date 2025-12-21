@@ -4,44 +4,38 @@ import {
 	checkStale,
 	markResourcesRefreshed,
 } from "../db/operations/staleness.js";
-import { checkStaleInput } from "../schemas/context.js";
-import { z } from "zod";
-
-const markRefreshedInput = z.object({
-	ids: z
-		.array(z.number().int().positive())
-		.min(1)
-		.describe("Resource IDs to mark as refreshed"),
-});
+import {
+	checkStaleInput,
+	checkStaleOutput,
+	markRefreshedInput,
+	markRefreshedOutput,
+} from "../schemas/context.js";
+import { registerDbTool } from "./utils.js";
 
 export function registerContextTools(server: McpServer, db: DB) {
-	server.registerTool(
-		"check_stale",
-		{
-			description:
-				"Check for stale resources, skills with changed dependencies, and unverified facts. Returns retrieval methods for stale resources so you can refresh them.",
-			inputSchema: checkStaleInput,
+	registerDbTool(server, db, {
+		name: "check_stale",
+		title: "Check for Stale Resources",
+		description:
+			"Check for stale resources, skills with changed dependencies, and unverified facts. Returns retrieval methods for stale resources so you can refresh them.",
+		inputSchema: checkStaleInput,
+		outputSchema: checkStaleOutput,
+		annotations: {
+			readOnlyHint: true,
 		},
-		async (params) => {
-			const result = await checkStale(db, params);
-			return {
-				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-			};
-		},
-	);
+		handler: checkStale,
+	});
 
-	server.registerTool(
-		"mark_resources_refreshed",
-		{
-			description:
-				"Mark resources as refreshed after you have verified their content is still valid",
-			inputSchema: markRefreshedInput,
+	registerDbTool(server, db, {
+		name: "mark_resources_refreshed",
+		title: "Mark Resources as Refreshed",
+		description:
+			"Mark resources as refreshed after you have verified their content is still valid",
+		inputSchema: markRefreshedInput,
+		outputSchema: markRefreshedOutput,
+		annotations: {
+			idempotentHint: true,
 		},
-		async ({ ids }) => {
-			const result = await markResourcesRefreshed(db, ids);
-			return {
-				content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-			};
-		},
-	);
+		handler: async (db, { ids }) => markResourcesRefreshed(db, ids),
+	});
 }

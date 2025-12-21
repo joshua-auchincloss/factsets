@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { spawn, type ChildProcess } from "node:child_process";
 import type { CommandHandler } from "./types.js";
 import { createConnection, runMigrations } from "../db/index.js";
+import { initializeConfigDefaults } from "../db/operations/config.js";
 import { registerTagTools } from "../tools/tags.js";
 import { registerFactTools } from "../tools/facts.js";
 import { registerResourceTools } from "../tools/resources.js";
@@ -97,6 +98,16 @@ export const mcpServerHandler = async (
 		}
 	}
 
+	// Initialize config defaults (ensures all config keys have values)
+	if (!config.dryRun) {
+		const configInit = await initializeConfigDefaults(db);
+		if (configInit.initialized.length > 0) {
+			console.error(
+				`[factsets] Initialized ${configInit.initialized} config defaults`,
+			);
+		}
+	}
+
 	registerTagTools(server, db);
 	registerFactTools(server, db);
 	registerResourceTools(server, db);
@@ -116,6 +127,7 @@ export const mcpServerHandler = async (
 	// --no-watch-skills overrides --watch-skills
 	const shouldWatch =
 		config.watchSkills && !config.noWatchSkills && !config.dryRun;
+
 	let watcherProcess: ChildProcess | undefined;
 
 	if (shouldWatch) {

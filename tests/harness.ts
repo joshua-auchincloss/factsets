@@ -77,6 +77,8 @@ export async function seedTestData(db: TestDB) {
 			{
 				uri: "file:///project/tsconfig.json",
 				type: "file",
+				description:
+					"TypeScript configuration file for project compiler settings",
 				tags: ["typescript", "config"],
 				snapshot: '{"compilerOptions": {"strict": true}}',
 				retrievalMethod: { type: "file" },
@@ -84,6 +86,7 @@ export async function seedTestData(db: TestDB) {
 			{
 				uri: "https://bun.sh/docs",
 				type: "url",
+				description: "Official Bun documentation website",
 				tags: ["bun", "docs"],
 				retrievalMethod: { type: "url", url: "https://bun.sh/docs" },
 			},
@@ -93,6 +96,7 @@ export async function seedTestData(db: TestDB) {
 	await createSkill(db, {
 		name: "typescript-setup",
 		title: "TypeScript Project Setup",
+		description: "Guide for setting up a TypeScript project from scratch",
 		content:
 			"# TypeScript Setup\n\n1. Install TypeScript\n2. Create tsconfig.json\n3. Configure strict mode",
 		tags: ["typescript", "setup"],

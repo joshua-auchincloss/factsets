@@ -2,6 +2,7 @@ import type { AppConfig } from "../config.js";
 import { mcpServerHandler } from "./mcp-server.js";
 import { dumpHandler, restoreHandler } from "./dump.js";
 import { watchFilesHandler } from "./watch-files.js";
+import { workerHandler } from "./worker.js";
 import type { CommandRegistry } from "./types.js";
 
 const handlers: CommandRegistry = {
@@ -9,6 +10,7 @@ const handlers: CommandRegistry = {
 	"watch-files": watchFilesHandler,
 	dump: dumpHandler,
 	restore: restoreHandler,
+	worker: workerHandler,
 };
 
 export async function dispatch(config: AppConfig): Promise<void> {
@@ -25,6 +27,9 @@ export async function dispatch(config: AppConfig): Promise<void> {
 			break;
 		case "restore":
 			await handlers["restore"](command);
+			break;
+		case "worker":
+			await handlers["worker"](command);
 			break;
 	}
 }

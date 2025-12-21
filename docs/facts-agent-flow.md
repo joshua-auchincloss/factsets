@@ -1,125 +1,316 @@
 # Factsets Agent Workflow
 
-Factsets is an MCP server providing persistent knowledge storage: **facts** (atomic statements), **resources** (cached
-external content), **skills** (procedural markdown), **execution logs** (command history), and **tags** (categorization).
+If information is valuable enough to tell the user, it is valuable enough to store in Factsets.
 
-## Getting Started
+Factsets provides persistent knowledge: **facts** (atomic statements), **resources** (cached external content), **skills** (procedural markdown), **execution logs** (command history), **tags** (categorization).
 
-**First time using Factsets?** Call `get_agent_guide` to get this workflow guide, or `get_factsets_concept` for the
-conceptual overview explaining the design philosophy.
+## Headless Operation Philosophy
+
+Factsets is designed for headless, continuous operation. Agents must use Factsets tools on every prompt, every analysis, and every task. This is not optional behavior.
+
+### Core Principles
+
+| Principle             | Description                                                                    |
+| --------------------- | ------------------------------------------------------------------------------ |
+| Every prompt          | Use Factsets tools on every single user prompt, not just when explicitly asked |
+| Continuous validation | Validate facts and context before every response, not periodically             |
+| Proactive capture     | Store knowledge immediately as it is discovered, without user prompting        |
+| Zero cost             | Factsets is free to use; there is no concern about overuse or rate limits      |
+| Battle tested         | The system is production ready; one agent session cannot overwhelm it          |
+
+### Good vs Bad Usage
+
+| Good Usage                            | Bad Usage                            |
+| ------------------------------------- | ------------------------------------ |
+| Use Factsets on every prompt          | Wait for user to ask about knowledge |
+| Search before every task              | Only search at session start         |
+| Submit facts immediately              | Batch facts at end of session        |
+| Log commands as they succeed          | Forget to log commands               |
+| Check existing skills before creating | Duplicate existing skills            |
+| Update facts when they change         | Let facts become stale               |
+
+Bad usage is forgetting the tool exists between prompts. An agent that goes multiple user inputs without using Factsets is doing it wrong.
+
+### Why Continuous Usage Matters
+
+1. **Context decay** - Without validation, agents drift from ground truth
+2. **Knowledge loss** - Insights not captured immediately are lost
+3. **Duplicate work** - Skills and facts get recreated unnecessarily
+4. **Stale responses** - Outdated facts lead to incorrect answers
+5. **Broken continuity** - Cross-session learning fails without capture
+
+Factsets is your memory. Use it constantly.
+
+## Documentation Standards
+
+All documentation, facts, resources, and skills must follow these rules:
+
+| Rule                  | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| Markdown              | GitHub Flavored Markdown only                    |
+| No emojis             | Do not use emoji characters                      |
+| No special characters | E.g. use `->` not special unicode arrows         |
+| No ASCII diagrams     | Avoid box-drawing or diagram characters          |
+| Direct language       | Avoid all-caps, exclamation points, or hyperbole |
+| Token efficient       | Be concise without losing clarity                |
+| Neutral tone          | Facts and knowledge are objective statements     |
+
+## Workflow
+
+Every prompt.
+
+1. `search_facts` / `search_skills` - validate existing knowledge is current
+2. Do work
+3. `submit_facts` - capture anything learned
+4. `add_resources` - register any URLs fetched
+5. `submit_execution_logs` - log successful commands
+
+Factsets is not optional. Every research task, URL fetch, and successful command must be captured automatically.
+
+## Automatic Triggers
+
+These actions require no user prompt. They happen automatically.
+
+| Trigger                | Action                       | Tool                               |
+| ---------------------- | ---------------------------- | ---------------------------------- |
+| Any user prompt        | Validate relevant context    | `search_facts`, `search_skills`    |
+| Before any task        | Look for existing procedures | `search_skills`                    |
+| Fetch any URL          | Register as resource         | `add_resources`                    |
+| Research or learn      | Store findings immediately   | `submit_facts`                     |
+| Command succeeds       | Log execution                | `submit_execution_logs`            |
+| Fact changes           | Update immediately           | `update_fact`                      |
+| Before create skill    | Check for existing skill     | `search_skills` by name or tags    |
+| Multi-step procedure   | Document as skill            | `create_skill`                     |
+| See placeholder desc   | Fix with real description    | `update_resource` / `update_skill` |
+| Description misaligned | Update to match content      | `update_resource` / `update_skill` |
+| Answer user question   | Verify facts are current     | `search_facts`                     |
+
+### Continuous Validation Pattern
+
+Before answering any question or making any claim:
+
+1. Search for relevant facts with `search_facts`
+2. Check if facts are verified and recent
+3. If facts seem stale or missing, gather fresh information
+4. Update facts with new information via `update_fact` or `submit_facts`
+5. Then respond to user
+
+This happens on every prompt where facts are relevant.
+
+### Description Alignment
+
+Descriptions must accurately reflect content. When you encounter a resource or skill during work:
+
+1. **Check alignment** - Does the description match what the content actually contains?
+2. **Fix misalignment** - If the description is vague, outdated, or misleading, update it immediately
+3. **Be specific** - Good descriptions mention key technologies, purpose, and scope
+
+**Misaligned description indicators:**
+
+- Generic phrases like "configuration file" when it's specifically "ESLint config with TypeScript rules"
+- Outdated references to removed features or changed behavior
+- Missing key details that would help with search and discovery
+- Descriptions that don't mention the primary use case
+
+**Example fixes:**
+
+| Before              | After                                                           |
+| ------------------- | --------------------------------------------------------------- |
+| "API documentation" | "REST API reference for user authentication endpoints"          |
+| "Config file"       | "Drizzle ORM config with SQLite connection and migration paths" |
+| "Test utilities"    | "Bun test harness with in-memory SQLite and MCP client factory" |
+
+Do not wait for maintenance reports. Fix descriptions as you encounter them during normal work.
+
+## Anti-Patterns
+
+| Do Not                            | Do Instead                                                  |
+| --------------------------------- | ----------------------------------------------------------- |
+| Fetch URL without `add_resources` | Always register URLs as resources                           |
+| Research without `submit_facts`   | Capture key learnings as atomic facts                       |
+| Command succeeds without logging  | `submit_execution_logs` for all successes                   |
+| Wait for user to say "save this"  | Capture knowledge automatically                             |
+| Skip checking existing knowledge  | `search_facts`, `search_skills` before work                 |
+| Create skill without checking     | `search_skills` first, then create or update                |
+| Leave placeholder descriptions    | Fix `[auto-migrated]` / `[auto-generated]` when encountered |
+| Ignore misaligned descriptions    | Update descriptions when they don't match actual content    |
+| Use generic descriptions          | Be specific about technologies, purpose, and scope          |
+| Go multiple prompts without use   | Use Factsets tools on every prompt                          |
+| Only check facts at session start | Validate facts continuously                                 |
+| Batch knowledge capture           | Capture immediately as discovered                           |
+| Worry about overusing the system  | Use freely; there is no cost or rate limit                  |
 
 ## Workflow Phases
 
-1. **Discover** - `list_tags` at session start, `search_skills` for domain
-1. **Retrieve** - `get_skill` / `build_skill_context` for procedures
-1. **Execute** - Perform task, log commands with `submit_execution_logs`
-1. **Contribute** - `create_skill` (link execution log!) / `submit_facts`
-1. **Maintain** - `check_stale` periodically (not every session)
+1. **Validate** - `search_facts`, `search_skills` for current knowledge (every prompt)
+2. **Retrieve** - `get_skill` / `build_skill_context` for procedures
+3. **Execute** - perform task, log commands with `submit_execution_logs`
+4. **Contribute** - `create_skill` (link execution log) / `submit_facts`
+5. **Update** - `update_fact` when information changes
+6. **Maintain** - `check_stale` periodically (not every prompt, but regularly)
 
-**Core Principle:** Skills are the primary knowledge unit. Facts support skills. Execution logs validate skills.
+Skills are the primary unit. Facts support skills. Execution logs validate skills.
 
-## Discovery
+## Configuration Overview
 
-**Every session:** `list_tags { limit: 100, orderBy: "usage" }` returns tags sorted by most-used first.
+Factsets is highly configurable. Use `get_config_schema` to see all options with types and defaults.
 
-**Task-specific:** `search_facts { tags: ["relevant-tag"], limit: 20, orderBy: "recent" }`
+### Key Configuration Categories
 
-**Full context:** Use `get_knowledge_context` tool with `tags: ["tag1", "tag2"]` for assembled facts + resources + skills + staleness warnings. Returns structured JSON with markdown and metadata.
+| Category            | Config Keys                          | Purpose                                 |
+| ------------------- | ------------------------------------ | --------------------------------------- |
+| Freshness           | `freshness_source_code`, etc.        | Hours before resource types go stale    |
+| Search Limits       | `search_limit_facts`, etc.           | Max results for search operations       |
+| Context Budgets     | `context_budget_facts`, etc.         | Max items in `get_knowledge_context`    |
+| Tag Relationships   | `tag_synonyms`, `tag_hierarchies`    | Expand searches to related tags         |
+| Required Tags       | `required_tags`                      | Enforce tagging policies per entity     |
+| Snapshot Management | `snapshot_max_size_kb`, etc.         | Control snapshot storage behavior       |
+| Maintenance         | `staleness_warning_threshold`, etc.  | Tuning staleness detection              |
+| Worker Intervals    | `worker_interval_auto_verify`, etc.  | Background task scheduling              |
 
-Alternatively, use the `knowledge_context` prompt (takes JSON string: `tags: '["tag1","tag2"]'`).
+### Common Configuration Tasks
 
-## Retrieval
+| Situation                         | Action                                                      |
+| --------------------------------- | ----------------------------------------------------------- |
+| Files change frequently           | Lower `freshness_source_code` (e.g., `6`)                   |
+| Docs rarely change                | Raise `freshness_documentation` (e.g., `168`)               |
+| Need more context in responses    | Increase `context_budget_facts` (e.g., `100`)               |
+| Want `js` to match `javascript`   | Set `tag_synonyms` to `{"js": "javascript"}`                |
+| Backend tag should include langs  | Set `tag_hierarchies` to `{"backend": ["python", "go"]}`    |
+| Require project tag on all facts  | Set `required_tags` to `{"fact": ["project"]}`              |
+| Earlier staleness warnings        | Lower `staleness_warning_threshold` (e.g., `0.7`)           |
 
-### Ordering Options
-
-Use `orderBy` to get the most relevant results first:
-
-| Entity    | Options                     | Best For                                                     |
-| --------- | --------------------------- | ------------------------------------------------------------ |
-| Facts     | `recent`, `oldest`, `usage` | `usage` for established knowledge, `recent` for new projects |
-| Resources | `recent`, `oldest`, `fresh` | `fresh` for active development, `recent` for new setups      |
-| Skills    | `recent`, `oldest`, `name`  | `name` for browsing, `recent` for latest procedures          |
-| Tags      | `usage`, `name`, `recent`   | `usage` for common domains, `name` for exploration           |
-
-### By Tag
-
-```json
-search_facts { "tags": ["api", "auth"], "orderBy": "usage", "limit": 50 }
-```
-
-### By Query
-
-```json
-search_facts { "query": "JWT token", "orderBy": "recent" }
-```
-
-### Resources
+### Inspecting Configuration
 
 ```json
-get_resource { "uri": "./config.json", "maxAgeHours": 24 }
+// List all current settings
+{ "tool": "list_config" }
+
+// Get schema with types and defaults
+{ "tool": "get_config_schema" }
+
+// Get specific value
+{ "tool": "get_config", "key": "freshness_source_code" }
 ```
 
-If `isFresh: false`, execute `retrievalMethod` and call `update_resource_snapshot`. Use higher `maxAgeHours`
-for stable configs (24h), lower for volatile files (1h).
+### Setting Configuration
 
-## Contribution
+```json
+// Set a single value
+{ "tool": "set_config", "key": "freshness_source_code", "value": "6" }
+
+// JSON values must be stringified
+{ "tool": "set_config", "key": "tag_synonyms", "value": "{\"js\": \"javascript\"}" }
+```
+
+Do not change configuration without user acknowledgment. Explain what the change does and why.
+
+## Quick Reference
+
+| Operation        | Tool                       | Key Parameters                                                |
+| ---------------- | -------------------------- | ------------------------------------------------------------- |
+| List domains     | `list_tags`                | `limit`, `orderBy`                                            |
+| Get context      | `get_knowledge_context`    | `tags[]`, `maxFacts`, `maxResources`, `maxSkills`             |
+| Find facts       | `search_facts`             | `tags[]`, `query`, `orderBy`                                  |
+| Record facts     | `submit_facts`             | `facts[]` with `content`, `tags[]`, `sourceType`              |
+| Update fact      | `update_fact`              | `id` or `contentMatch`, `updates{}`                           |
+| Find resources   | `search_resources`         | `tags[]`, `type`, `orderBy`                                   |
+| Get resource     | `get_resource`             | `uri` or `id`, `maxAgeHours`                                  |
+| Add resources    | `add_resources`            | `resources[]` with `uri`, `type`, `tags[]`, `retrievalMethod` |
+| Update metadata  | `update_resource`          | `id` or `uri`, `description`, `tags`, `appendTags`            |
+| Refresh snapshot | `update_resource_snapshot` | `resourceId`, `snapshot`                                      |
+| Find skills      | `search_skills`            | `tags[]`, `query`, `orderBy`                                  |
+| Get skill        | `build_skill_context`      | `name`, `includeRefs`                                         |
+| Create skill     | `create_skill`             | `name`, `title`, `content`, `tags[]`, `executionLogId`        |
+| Log command      | `submit_execution_logs`    | `logs[]` with `command`, `success`, `output`, `exitCode`      |
+| Search logs      | `search_execution_logs`    | `query`, `success`, `skillName`, `tags[]`                     |
+| Check stale      | `get_maintenance_report`   | `maxAgeHours`                                                 |
+| Mark fresh       | `mark_resources_refreshed` | `ids[]`                                                       |
+| Prune tags       | `prune_orphan_tags`        | `dryRun`                                                      |
+
+## Core Operations
 
 ### Facts
 
-Submit when learning project conventions, user preferences, technical specifics, or gotchas.
+Submit when learning project conventions, preferences, technical specifics, or gotchas.
 
 ```json
-submit_facts { "facts": [{
-  "content": "Project uses Drizzle ORM with SQLite",
-  "tags": ["database", "orm"],
-  "sourceType": "code",
-  "verified": true
-}]}
-```
-
-- Atomic (1-3 sentences)
-- Use existing tags
-- `sourceType`: `user`, `documentation`, `code`, `inference`
-- `verified: true` only if confirmed
-
-### Updating Facts
-
-To update an existing fact's content, metadata, or tags:
-
-```json
-update_fact {
-  "id": 42,
-  "updates": {
-    "content": "Updated content here",
-    "verified": true,
-    "appendTags": ["reviewed"]
-  }
+{
+  "facts": [
+    {
+      "content": "Project uses Drizzle ORM with SQLite",
+      "tags": ["database", "orm"],
+      "sourceType": "code",
+      "verified": true
+    }
+  ]
 }
 ```
 
-Find fact by ID or exact content match:
+- Atomic: 1-3 sentences each
+- sourceType: `user`, `documentation`, `code`, `inference`
+- verified: `true` only if confirmed
+
+### Resources
+
+Register any URL you fetch or file you read repeatedly.
 
 ```json
-update_fact {
-  "contentMatch": "Original exact content",
-  "updates": { "verified": true }
+{
+  "resources": [
+    {
+      "uri": "https://example.com/docs",
+      "type": "url",
+      "tags": ["documentation"],
+      "retrievalMethod": { "type": "url", "url": "https://example.com/docs" }
+    }
+  ]
 }
 ```
 
-**Update options:**
-- `content`: New content text
-- `source`, `sourceType`: Update provenance
-- `verified`: Set verification status
-- `tags`: Replace all tags with new array
-- `appendTags`: Add tags without removing existing
-- `removeTags`: Remove specific tags
+For files:
+
+```json
+{
+  "resources": [
+    {
+      "uri": "./package.json",
+      "type": "file",
+      "tags": ["config"],
+      "retrievalMethod": { "type": "file", "command": "cat ./package.json" }
+    }
+  ]
+}
+```
 
 ### Skills
 
-Create for multi-step procedures or patterns spanning multiple facts. **For command-based skills, always link the execution log that validated the procedure.**
+Create for multi-step procedures. Always link the execution log that validated it.
+
+**Before creating a skill:**
+
+1. `search_skills` with relevant tags or query to check if a similar skill exists
+2. If found, use `update_skill` to improve the existing skill instead
+3. Only `create_skill` if no matching skill exists
+
+```json
+{
+  "logs": [
+    {
+      "command": "bun test",
+      "workingDirectory": "./",
+      "output": "42 tests passed",
+      "exitCode": 0,
+      "success": true
+    }
+  ]
+}
+```
+
+Returns log with id. Then create skill linked to execution:
 
 ````json
-create_skill {
+{
   "name": "run-tests",
   "title": "Running Tests",
   "content": "# Running Tests\n\n```bash\nbun test\n```",
@@ -128,226 +319,199 @@ create_skill {
 }
 ````
 
-**Best Practice:** When a command succeeds, log it first, then create the skill referencing that log:
+### Execution Logs
+
+Log every successful command. This creates institutional memory.
 
 ```json
-// 1. Run and log the command
-submit_execution_logs { "logs": [{
-  "command": "bun test",
-  "workingDirectory": "./",
-  "context": "Verified test command works",
-  "output": "✓ 42 tests passed",
-  "exitCode": 0,
-  "success": true,
-  "durationMs": 3500
-}]}
-// Returns: { "logs": [{ "id": 42, ... }] }
-
-// 2. Create skill linked to the execution
-create_skill {
-  "name": "run-tests",
-  "title": "Running Tests",
-  "content": "...",
-  "tags": ["testing"],
-  "executionLogId": 42
+{
+  "logs": [
+    {
+      "command": "bun drizzle-kit generate",
+      "workingDirectory": "./",
+      "context": "Generated migration after schema change",
+      "output": "1 migration generated",
+      "exitCode": 0,
+      "success": true,
+      "durationMs": 1200,
+      "tags": ["database", "migrations"]
+    }
+  ]
 }
 ```
 
-This allows **skill re-validation** by re-running the linked command.
+## Ordering Options
 
-Skill files are automatically synced when modified (via the file watcher). If auto-sync is disabled, manually call `sync_skill { "name": "run-tests" }` after editing. Use `update_skill` for metadata/tags/references only.
+| Entity    | Options                     | Best For                                  |
+| --------- | --------------------------- | ----------------------------------------- |
+| Facts     | `recent`, `oldest`, `usage` | `usage` for established, `recent` for new |
+| Resources | `recent`, `oldest`, `fresh` | `fresh` for active development            |
+| Skills    | `recent`, `oldest`, `name`  | `name` for browsing                       |
+| Tags      | `usage`, `name`, `recent`   | `usage` for common domains                |
 
-### Execution Logs
+## Runtime Configuration
 
-**Log every successful command, migration, test run, or build.** This creates institutional memory for what works.
+Factsets is self-configuring. Agents can inspect and manage configuration on behalf of users.
 
-```json
-submit_execution_logs { "logs": [{
-  "command": "bun drizzle-kit generate",
-  "workingDirectory": "./",
-  "context": "Generated migration after adding execution_logs table",
-  "output": "1 migration generated",
-  "exitCode": 0,
-  "success": true,
-  "durationMs": 1200,
-  "skillName": "database-migrations",
-  "tags": ["database", "migrations"]
-}]}
-```
+### Session Start
 
-**When to log:**
-- Command succeeds and should be remembered
-- Migration runs successfully
-- Test suite passes with specific configuration
-- Build completes with notable settings
-- Any reusable procedure is validated
-
-**Search execution history:**
+At the start of every session, inspect configuration to understand system behavior:
 
 ```json
-// Find what worked before
-search_execution_logs { "query": "drizzle", "success": true }
-
-// Check skill validation history
-search_execution_logs { "skillName": "run-tests", "limit": 10 }
-
-// Filter by tags
-search_execution_logs { "tags": ["database"], "success": true }
+// Use list_config or get_config_schema
 ```
 
-**Re-validate skills:** When a skill has an `executionLogId`, use `get_execution_log` to retrieve the original command and re-run it to verify the procedure still works.
+This tells you:
 
-### Resources
+- Current freshness thresholds for each resource category
+- Skills directory location
+- Client type
 
-Add for documentation URLs, config files, API schemas, frequently-read files.
+### Configuration Management
+
+Agents can and should manage configuration when appropriate:
+
+| Situation                         | Action                                             |
+| --------------------------------- | -------------------------------------------------- |
+| User mentions files change often  | Offer to reduce freshness threshold                |
+| User says docs are always current | Offer to increase documentation freshness          |
+| User wants stricter staleness     | Adjust thresholds via `set_config`                 |
+| Project has specific needs        | Ask user if they want thresholds adjusted          |
+| First time using Factsets         | Explain that config can be tuned to their workflow |
+
+### Freshness Categories
+
+Resources are automatically categorized by URI pattern. Each category has a configurable staleness threshold.
+
+| Category        | Config Key                  | Default | Description                                |
+| --------------- | --------------------------- | ------- | ------------------------------------------ |
+| Source Code     | `freshness_source_code`     | 12h     | `.ts`, `.js`, `.py`, `.go` etc.            |
+| Lock Files      | `freshness_lock_files`      | 168h    | `package-lock.json`, `bun.lockb`, etc.     |
+| Config Files    | `freshness_config_files`    | 24h     | `tsconfig.json`, `.eslintrc`, `biome.json` |
+| Documentation   | `freshness_documentation`   | 72h     | `.md`, `.mdx`, `/docs/` paths              |
+| Generated Files | `freshness_generated_files` | 1h      | `/dist/`, `/build/`, `.min.js`             |
+| API Schemas     | `freshness_api_schemas`     | 24h     | `.graphql`, `.proto`, OpenAPI specs        |
+| Database        | `freshness_database`        | 72h     | `.sql`, `/migrations/`, Prisma/Drizzle     |
+| Scripts         | `freshness_scripts`         | 72h     | `.sh`, `/scripts/`, Makefiles              |
+| Tests           | `freshness_tests`           | 24h     | `.test.ts`, `/__tests__/`, fixtures        |
+| Assets          | `freshness_assets`          | 168h    | Images, fonts, media files                 |
+| Infrastructure  | `freshness_infrastructure`  | 24h     | Terraform, Docker, K8s, CI/CD              |
+| Default         | `freshness_default`         | 168h    | Anything not matching other categories     |
+
+### Category Inference
+
+When you register a resource, Factsets automatically infers its category from the URI:
+
+- `./src/main.ts` -> `sourceCode` (12h freshness)
+- `./package-lock.json` -> `lockFiles` (168h freshness)
+- `./docs/api.md` -> `documentation` (72h freshness)
+- `./dist/bundle.js` -> `generatedFiles` (1h freshness)
+- `./.github/workflows/ci.yml` -> `infrastructure` (24h freshness)
+
+Resources can match multiple categories. When they do, the strictest (shortest) threshold applies.
+
+### Adjusting Thresholds
 
 ```json
-add_resources { "resources": [{
-  "uri": "./package.json",
-  "type": "file",
-  "tags": ["config"],
-  "snapshot": "[content]",
-  "retrievalMethod": { "type": "file", "command": "cat ./package.json" }
-}]}
+// Set source code freshness to 6 hours
+{ "key": "freshness_source_code", "value": "6" }
+
+// Set documentation freshness to 1 week
+{ "key": "freshness_documentation", "value": "168" }
 ```
+
+### When to Suggest Config Changes
+
+Ask the user about configuration when:
+
+- They repeatedly encounter stale warnings for certain file types
+- They express that certain files "never change" or "change constantly"
+- A project has unusual characteristics (e.g., docs generated from code)
+- The default thresholds don't match their development cadence
+
+Do not change config without user acknowledgment. Explain what the change does and why.
 
 ## Maintenance
 
-### Staleness Checking
-
-Use `get_maintenance_report` tool for a comprehensive view of stale items:
+Run periodically during extended sessions:
 
 ```json
-get_maintenance_report { "maxAgeHours": 168 }
+{ "maxAgeHours": 168 }
 ```
 
-Returns structured JSON with markdown report and summary counts.
+- Stale resources: execute `retrievalMethod`, call `update_resource_snapshot`
+- Unverified facts: review accuracy, `verify_facts` with ids
+- Skills pending review: use `update_skill` to add tags or description
+- Incomplete descriptions: replace placeholder text with meaningful descriptions
+- Orphan tags: use `prune_orphan_tags` with `dryRun: true` to preview, then without to clean up
 
-The same `maxAgeHours` parameter works for fine-grained control:
+The `get_knowledge_context` tool automatically includes staleness warnings.
+
+### Placeholder Descriptions
+
+Resources and skills may have auto-generated placeholder descriptions:
+
+- `[auto-migrated] Needs description`
+- `[auto-generated] Needs description`
+
+When you encounter these in search results or maintenance reports:
+
+1. Read the resource content or skill file to understand its purpose
+2. Write a concise, meaningful description (1-2 sentences)
+3. Update using `update_resource` or `update_skill`
+
+**Example fix:**
 
 ```json
-// For active development - check items older than 6 hours
-check_stale { "maxAgeHours": 6, "checkResources": true, "checkSkills": false }
-
-// For periodic review - check weekly (168 hours)
-check_stale { "maxAgeHours": 168 }
+{
+  "id": 42,
+  "description": "TypeScript compiler configuration with strict mode and ES2022 target"
+}
 ```
 
-**Stale resources:** Use `get_refresh_guide { resourceId: X }` for step-by-step instructions, then execute `retrievalMethod`, call `update_resource_snapshot`, and `mark_resources_refreshed`.
-
-**Unverified facts:** Review accuracy. `verify_facts { ids: [...] }` or `delete_facts { ids: [...] }`.
-
-For bulk verification by topic: `verify_facts_by_tags { tags: ["reviewed-topic"] }`
-
-**Skills pending review:** These are auto-discovered skills (added via file watcher, not `create_skill`). Review their content and use `update_skill` to add tags and description - this clears the review flag.
-
-### Automated Staleness Warnings
-
-The `get_knowledge_context` tool automatically includes staleness warnings (disable with `includeStalenessWarnings: false`).
-This provides proactive awareness without requiring explicit `check_stale` calls.
-
-## Efficiency Tips
-
-### Use Ordering for Relevance
-
-- **High-activity projects:** `orderBy: "recent"` surfaces latest knowledge
-- **Established projects:** `orderBy: "usage"` surfaces battle-tested knowledge
-- **Browsing/learning:** `orderBy: "name"` for alphabetical exploration
-
-### Configure Freshness Appropriately
-
-| Resource Type   | Suggested `maxAgeHours` |
-| --------------- | ----------------------------------- |
-| Lock files      | 168 (1 week)                        |
-| Config files    | 24                                  |
-| Documentation   | 72                                  |
-| Generated files | 1                                   |
-| API schemas     | 24                                  |
-
-### General Guidelines
-
-- Use tags for filtering, set reasonable limits (defaults are generous: 50 facts, 20 resources, 10 skills)
-- Batch operations (arrays in `submit_facts`, `update_resource_snapshots`)
-- Use `get_knowledge_context` tool for multi-type retrieval with automatic staleness warnings
-- Use `build_skill_context` to get formatted skill content with references
-- Do not run `check_stale` every session - staleness warnings in context tools handle routine awareness
-- Store file contents as resources, not facts
-
-## CLI Commands
-
-Beyond MCP, Factsets provides CLI commands:
-
-```bash
-# Start MCP server (with automatic skill file watching)
-bunx factsets mcp-server --database-url ./my.db
-
-# Start without file watching
-bunx factsets mcp-server --no-watch-skills
-
-# Run file watcher standalone
-bunx factsets watch-files
-
-# Export database to JSON (backup/migration)
-bunx factsets dump backup.json
-
-# Import database from JSON dump
-bunx factsets restore backup.json
-```
-
-**Dump/Restore** are useful for:
-
-- Backing up knowledge before major changes
-- Migrating between environments
-- Seeding new projects with existing knowledge
+Do not leave placeholder descriptions. Fix them as you encounter them.
 
 ## Bootstrapping Empty Projects
 
 1. Read package.json, README
-1. `create_tags { "tags": [{ "name": "project" }, { "name": "config" }] }`
-1. `submit_facts` with project name, runtime, entry point
-1. `add_resources` for key config files
+2. `create_tags` with project tag and description
+3. `submit_facts` with project name, runtime, entry point
+4. `add_resources` for key config files
 
-## Reference
+## CLI Commands
 
-| Operation            | Tool                        | Key Parameters                                                              |
-| -------------------- | --------------------------- | --------------------------------------------------------------------------- |
-| **Guides**           |                             |                                                                             |
-| Agent workflow guide | `get_agent_guide`           | _(none)_ - **call first**                                                   |
-| Concept overview     | `get_factsets_concept`      | _(none)_                                                                    |
-| **Discovery**        |                             |                                                                             |
-| List domains         | `list_tags`                 | `limit`, `orderBy`                                                          |
-| Get context          | `get_knowledge_context`     | `tags`, `maxFacts`, `maxResources`, `maxSkills`, `includeStalenessWarnings` |
-| **Facts**            |                             |                                                                             |
-| Find facts           | `search_facts`              | `tags`, `query`, `limit`, `orderBy`                                         |
-| Record facts         | `submit_facts`              | `facts[]`                                                                   |
-| Update fact          | `update_fact`               | `id`/`contentMatch`, `updates{}`                                            |
-| Verify facts         | `verify_facts`              | `ids[]`                                                                     |
-| Verify by tags       | `verify_facts_by_tags`      | `tags[]`, `requireAll`                                                      |
-| Delete facts         | `delete_facts`              | `ids[]`, `tags[]`, `olderThan`, `unverifiedOnly`                            |
-| **Resources**        |                             |                                                                             |
-| Find resources       | `search_resources`          | `tags`, `type`, `limit`, `orderBy`                                          |
-| Get resource         | `get_resource`              | `uri`/`id`, `maxAgeHours`                                                   |
-| Get resources (batch)| `get_resources`             | `ids[]`/`uris[]`, `maxAgeHours`                                             |
-| Refresh resource     | `update_resource_snapshot`  | `uri`, `snapshot`                                                           |
-| Bulk refresh         | `update_resource_snapshots` | `snapshots[]`                                                               |
-| Delete resources     | `delete_resources`          | `ids`, `uris`                                                               |
-| **Skills**           |                             |                                                                             |
-| Find skills          | `search_skills`             | `tags`, `query`, `limit`, `orderBy`                                         |
-| Get skill            | `get_skill`                 | `name`, `hydrateRefs`                                                       |
-| Build skill context  | `build_skill_context`       | `name`, `includeRefs`                                                       |
-| Create skill         | `create_skill`              | `name`, `title`, `content`, `tags`, `executionLogId`                        |
-| Update skill         | `update_skill`              | `name`, `title`, `description`, `tags`, `executionLogId`                    |
-| Sync skill           | `sync_skill`                | `name`                                                                      |
-| Delete skills        | `delete_skills`             | `names`, `deleteFiles`                                                      |
-| **Execution Logs**   |                             |                                                                             |
-| Log executions       | `submit_execution_logs`     | `logs[]` with `command`, `success`, `output`, `exitCode`, `tags`            |
-| Search logs          | `search_execution_logs`     | `query`, `success`, `skillName`, `tags`, `limit`, `orderBy`                 |
-| Get log              | `get_execution_log`         | `id`                                                                        |
-| **Maintenance**      |                             |                                                                             |
-| Check staleness      | `check_stale`               | `maxAgeHours`                                                               |
-| Maintenance report   | `get_maintenance_report`    | `maxAgeHours`                                                               |
-| Refresh guide        | `get_refresh_guide`         | `resourceId`                                                                |
-| Mark refreshed       | `mark_resources_refreshed`  | `ids[]`                                                                     |
+```bash
+bunx factsets mcp-server --database-url ./my.db
+bunx factsets dump backup.json
+bunx factsets restore backup.json
+```
 
-**Tags:** lowercase, hyphenated. Prefer existing over new. Common: `config`, `testing`, `api`, `database`, `deployment`,
-`patterns`.
+## System Characteristics
+
+| Characteristic | Value                                     |
+| -------------- | ----------------------------------------- |
+| Cost           | Free - no API costs, no rate limits       |
+| Performance    | Battle tested for production use          |
+| Capacity       | Cannot be overwhelmed by agent sessions   |
+| Reliability    | Self-maintaining with staleness detection |
+
+There is no reason to conserve Factsets usage. Use it on every prompt.
+
+## Self-Check
+
+Before ending any task:
+
+1. Did I learn something new? -> `submit_facts`
+2. Did I fetch external content? -> `add_resources`
+3. Did I run commands that worked? -> `submit_execution_logs`
+4. Did I discover a reusable procedure? -> `create_skill`
+5. Did I check existing knowledge first? -> if not, do better next time
+6. Did I use Factsets on this prompt? -> if not, start now
+
+If you did not use Factsets during research, learning, or execution, you did it wrong.
+
+## Reminder
+
+Use Factsets on every prompt. Validate facts continuously. Capture knowledge immediately. Update facts when they change. The system is free and cannot be overwhelmed.
+
+An agent that forgets Factsets exists between prompts is an agent that loses context, duplicates work, and provides stale information.

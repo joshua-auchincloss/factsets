@@ -8,6 +8,7 @@ import {
 	incrementTagUsage,
 	getTagIdsForSearch,
 	getSuggestedTags,
+	pruneOrphanTags,
 } from "../../src/db/operations/tags";
 import { submitFacts } from "../../src/db/operations/facts";
 import { setConfig } from "../../src/db/operations/config";
@@ -238,6 +239,88 @@ describe("tags operations - extended coverage", () => {
 		it("returns empty array when no tags exist", async () => {
 			const result = await getSuggestedTags(db, 5);
 			expect(result).toHaveLength(0);
+		});
+	});
+
+	describe("pruneOrphanTags", () => {
+		it("prunes tags not linked to any entities", async () => {
+			// Create tags without linking them to anything
+			await createTags(db, {
+				tags: [
+					{ name: "orphan1", description: "Orphan tag 1" },
+					{ name: "orphan2", description: "Orphan tag 2" },
+				],
+			});
+
+			const result = await pruneOrphanTags(db, {});
+			expect(result.pruned).toBe(2);
+
+			// Verify tags are deleted
+			const remaining = await listTags(db, {});
+			expect(remaining.tags).toHaveLength(0);
+		});
+
+		it("does not prune tags linked to facts", async () => {
+			await createTags(db, {
+				tags: [{ name: "used-by-fact", description: "Used by fact" }],
+			});
+
+			// Create a fact that uses the tag
+			await submitFacts(db, {
+				facts: [{ content: "Test fact", tags: ["used-by-fact"] }],
+			});
+
+			const result = await pruneOrphanTags(db, {});
+			expect(result.pruned).toBe(0);
+
+			const remaining = await listTags(db, {});
+			expect(remaining.tags).toHaveLength(1);
+			expect(remaining.tags[0]!.name).toBe("used-by-fact");
+		});
+
+		it("returns orphan list in dry run mode without deleting", async () => {
+			await createTags(db, {
+				tags: [{ name: "orphan-dry", description: "Orphan for dry run" }],
+			});
+
+			const result = await pruneOrphanTags(db, { dryRun: true });
+			expect(result.pruned).toBe(1);
+			expect(result.orphanTags).toBeDefined();
+			expect(result.orphanTags).toHaveLength(1);
+			expect(result.orphanTags![0]!.name).toBe("orphan-dry");
+
+			// Verify tag is NOT deleted in dry run
+			const remaining = await listTags(db, {});
+			expect(remaining.tags).toHaveLength(1);
+		});
+
+		it("returns zero when all tags are in use", async () => {
+			// Create a fact with a tag - this automatically creates the tag
+			await submitFacts(db, {
+				facts: [{ content: "Test fact", tags: ["active-tag"] }],
+			});
+
+			const result = await pruneOrphanTags(db, {});
+			expect(result.pruned).toBe(0);
+		});
+
+		it("handles mixed used and orphan tags", async () => {
+			// Create used tag through fact
+			await submitFacts(db, {
+				facts: [{ content: "Test fact", tags: ["used-tag"] }],
+			});
+
+			// Create orphan tags directly
+			await createTags(db, {
+				tags: [{ name: "orphan-mixed", description: "Orphan tag" }],
+			});
+
+			const result = await pruneOrphanTags(db, {});
+			expect(result.pruned).toBe(1);
+
+			const remaining = await listTags(db, {});
+			expect(remaining.tags).toHaveLength(1);
+			expect(remaining.tags[0]!.name).toBe("used-tag");
 		});
 	});
 });

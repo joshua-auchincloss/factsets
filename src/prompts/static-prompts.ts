@@ -15,15 +15,22 @@ const staticItems: StaticItem[] = [
 		name: "agent_guide",
 		toolName: "get_agent_guide",
 		description:
-			"Get the Factsets agent workflow guide. CALL THIS FIRST before using other factsets tools. Returns comprehensive instructions on how agents should interact with the knowledge base including discovery, retrieval, contribution, and maintenance workflows.",
+			"Get the Factsets agent workflow guide. CALL THIS FIRST before using other factsets tools. Returns comprehensive instructions on how agents should interact with the knowledge base including discovery, retrieval, contribution, and maintenance workflows. Emphasizes continuous usage on every prompt - not just at session start.",
 		filePath: "prompts/facts-agent-flow.md",
 	},
 	{
 		name: "concept",
-		toolName: "get_factsets_concept",
+		toolName: "get_concept_guide",
 		description:
-			"Get the Factsets conceptual overview explaining the system design, core concepts (facts, resources, skills, tags), and philosophy behind the knowledge management approach.",
+			"Get the Factsets conceptual overview explaining the system design, core concepts (facts, resources, skills, tags), and philosophy behind the knowledge management approach. Includes guidance on continuous headless operation.",
 		filePath: "prompts/concept.md",
+	},
+	{
+		name: "config",
+		toolName: "get_config_guide",
+		description:
+			"Get the Factsets configuration guide. Explains all available configuration options, their effects on system behavior, and recommended settings for different use cases. Check current config values after calling this.",
+		filePath: "prompts/config.md",
 	},
 ];
 

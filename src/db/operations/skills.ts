@@ -17,8 +17,13 @@ import {
 	incrementTagUsage,
 	getSuggestedTags,
 } from "./tags.js";
+import { expandTags, validateRequiredTags } from "./tag-relationships.js";
 import { getEffectiveSkillsDir } from "../../runtime-config.js";
-import { getConfig } from "./config.js";
+import {
+	getConfig,
+	getSearchLimit,
+	getSearchIncludeDeleted,
+} from "./config.js";
 import { computeHash } from "../../utils/hash.js";
 import { decodeCursor, getNextCursor } from "../../utils/cursor.js";
 import type {
@@ -58,6 +63,14 @@ export async function createSkill(
 	db: DB,
 	input: SkillCreateInput,
 ): Promise<SkillCreateOutput> {
+	// Validate required tags for the skill
+	const validation = await validateRequiredTags(db, "skills", input.tags);
+	if (!validation.valid) {
+		throw new Error(
+			`Required tags missing for skill: ${validation.missing.join(", ")}`,
+		);
+	}
+
 	const skillsDir = await resolveSkillsDir(db);
 	// Store relative path in DB
 	const relativeFilePath = join(skillsDir, `${input.name}.md`);
@@ -347,7 +360,7 @@ export async function syncSkill(
 			frontmatter.description !== undefined &&
 			frontmatter.description !== skillRecord.description
 		) {
-			updates.description = frontmatter.description || null;
+			updates.description = frontmatter.description;
 			metadataSynced = true;
 		}
 
@@ -422,8 +435,13 @@ export async function searchSkills(
 	db: DB,
 	input: SkillSearchInput,
 ): Promise<SkillSearchOutput> {
-	const limit = input.limit ?? 20;
+	// Use config-based default limit if not provided
+	const configLimit = await getSearchLimit(db, "skills");
+	const limit = input.limit ?? configLimit;
 	const tagIdsToIncrement: number[] = [];
+
+	// Check if we should include soft-deleted items
+	const includeDeleted = await getSearchIncludeDeleted(db);
 
 	// Parse cursor for offset
 	let offset = 0;
@@ -435,16 +453,21 @@ export async function searchSkills(
 		offset = cursorData.offset;
 	}
 
-	// Build conditions array (always starts with soft delete filter)
-	const conditions: ReturnType<typeof eq>[] = [isNull(skills.deletedAt)];
+	// Build conditions array (filter soft deleted unless config says otherwise)
+	const conditions: ReturnType<typeof eq>[] = includeDeleted
+		? []
+		: [isNull(skills.deletedAt)];
 
-	// Build tag IDs if needed
+	// Build tag IDs if needed, with synonym/hierarchy expansion
 	let tagIds: number[] = [];
 	if (input.tags && input.tags.length > 0) {
+		// Expand tags using synonyms and hierarchies from config
+		const expandedTags = await expandTags(db, input.tags);
+
 		const tagResults = await db
 			.select({ id: tags.id })
 			.from(tags)
-			.where(inArray(tags.name, input.tags));
+			.where(inArray(tags.name, expandedTags));
 
 		if (tagResults.length === 0) {
 			// No matching tags - suggest popular ones
@@ -808,17 +831,7 @@ export async function registerSkillFromFile(
 	if (!fileName.endsWith(".md")) {
 		return null;
 	}
-	const name = fileName.replace(/\.md$/, "");
-
-	const existing = await db
-		.select({ id: skills.id, name: skills.name })
-		.from(skills)
-		.where(eq(skills.name, name))
-		.limit(1);
-
-	if (existing.length > 0) {
-		return { id: existing[0]!.id, name, isNew: false };
-	}
+	const nameFromFile = fileName.replace(/\.md$/, "");
 
 	// Use relative path - fileExists will resolve to absolute internally
 	if (!(await fileExists(relativeFilePath))) {
@@ -830,6 +843,20 @@ export async function registerSkillFromFile(
 
 	// Parse frontmatter for metadata
 	const { frontmatter, body } = parseFrontmatter(content);
+
+	// Determine the canonical name: prefer frontmatter name, fallback to filename
+	const name = frontmatter?.name ?? nameFromFile;
+
+	// Check if skill already exists by name (including frontmatter name)
+	const existing = await db
+		.select({ id: skills.id, name: skills.name })
+		.from(skills)
+		.where(eq(skills.name, name))
+		.limit(1);
+
+	if (existing.length > 0) {
+		return { id: existing[0]!.id, name, isNew: false };
+	}
 
 	// Get title from frontmatter, or fallback to first heading, or filename
 	let title = frontmatter?.title;
@@ -844,7 +871,7 @@ export async function registerSkillFromFile(
 	const result = await db
 		.insert(skills)
 		.values({
-			name: frontmatter?.name ?? name,
+			name,
 			title,
 			description,
 			filePath: relativeFilePath,
@@ -869,7 +896,7 @@ export async function registerSkillFromFile(
 			.onConflictDoNothing();
 	}
 
-	return { id: skillId, name: frontmatter?.name ?? name, isNew: true };
+	return { id: skillId, name, isNew: true };
 }
 
 /**

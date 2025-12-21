@@ -2,6 +2,8 @@ import { eq, like, sql, inArray, and, desc, asc, or } from "drizzle-orm";
 import type { DB } from "../index.js";
 import { executionLogs, executionLogTags, tags } from "../schema.js";
 import { getOrCreateTags, incrementTagUsage } from "./tags.js";
+import { expandTags } from "./tag-relationships.js";
+import { getSearchLimit } from "./config.js";
 import { decodeCursor, getNextCursor } from "../../utils/cursor.js";
 import type {
 	ExecutionLogSubmitInput,
@@ -63,7 +65,9 @@ export async function searchExecutionLogs(
 	db: DB,
 	input: ExecutionLogSearchInput,
 ): Promise<ExecutionLogSearchOutput> {
-	const limit = input.limit ?? 50;
+	// Use config-based default limit if not provided
+	const configLimit = await getSearchLimit(db, "executionLogs");
+	const limit = input.limit ?? configLimit;
 	const tagIdsToIncrement: number[] = [];
 
 	// Parse cursor for offset
@@ -117,12 +121,15 @@ export async function searchExecutionLogs(
 		})
 		.from(executionLogs);
 
-	// Handle tag filtering
+	// Handle tag filtering with expansion
 	if (input.tags && input.tags.length > 0) {
+		// Expand tags using synonyms and hierarchies from config
+		const expandedTags = await expandTags(db, input.tags);
+
 		const tagResults = await db
 			.select({ id: tags.id })
 			.from(tags)
-			.where(inArray(tags.name, input.tags));
+			.where(inArray(tags.name, expandedTags));
 
 		if (tagResults.length === 0) {
 			// No matching tags - return empty with suggestions

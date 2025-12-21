@@ -38,6 +38,11 @@ jobs:
 
       - uses: jdx/mise-action@v3
 
+      # https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/github-actions.mdx
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
       - uses: actions/setup-node@v6
         with:
           node-version: '25'
@@ -50,6 +55,12 @@ jobs:
         run: bun run dist
 
       - run: npm publish --provenance --access public
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish
 
       - name: Release
         uses: softprops/action-gh-release@v2

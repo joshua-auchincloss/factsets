@@ -33,13 +33,13 @@ Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, et
 
 ```json5
 {
-  "mcpServers": {
-    "factsets": {
+  mcpServers: {
+    factsets: {
       // `bunx`, `npx` or `pnpm dlx`
-      "command": "bunx",
-      "args": ["factsets", "mcp-server"]
-    }
-  }
+      command: "bunx",
+      args: ["factsets", "mcp-server"],
+    },
+  },
 }
 ```
 
@@ -87,35 +87,88 @@ See [Configuration Guide](docs/config.md) for all options.
 
 ## MCP Tools
 
+### Facts
+
+| Tool                   | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `submit_facts`         | Add facts with tags and source tracking  |
+| `search_facts`         | Query facts by tags, content, or filters |
+| `verify_facts`         | Mark facts as verified by ID             |
+| `verify_facts_by_tags` | Bulk verify facts by tags                |
+| `update_fact`          | Update fact content, metadata, or tags   |
+| `delete_facts`         | Remove facts by criteria                 |
+| `restore_facts`        | Restore soft-deleted facts               |
+
+### Resources
+
 | Tool                        | Description                               |
 | --------------------------- | ----------------------------------------- |
-| `submit_facts`              | Add facts with tags and source tracking   |
-| `search_facts`              | Query facts by tags, content, or filters  |
-| `verify_facts`              | Mark facts as verified by ID              |
-| `verify_facts_by_tags`      | Bulk verify facts by tags                 |
-| `update_fact`               | Update fact content, metadata, or tags    |
-| `delete_facts`              | Remove facts by criteria                  |
 | `add_resources`             | Register resources with retrieval methods |
 | `search_resources`          | Find resources by tags, type, or URI      |
-| `get_resource`              | Get resource with freshness status        |
-| `update_resource_snapshot`  | Update cached content                     |
-| `update_resource_snapshots` | Bulk update snapshots                     |
+| `get_resources`             | Get resources by ID or URI with freshness |
+| `update_resource_snapshot`  | Update cached content for single resource |
+| `update_resource_snapshots` | Bulk update cached content                |
+| `update_resource`           | Update resource metadata (not content)    |
 | `delete_resources`          | Remove resources                          |
-| `create_skill`              | Create markdown skill document            |
-| `update_skill`              | Update skill metadata/references          |
-| `search_skills`             | Find skills by tags or query              |
-| `get_skill`                 | Get skill with content                    |
-| `link_skill`                | Link skill to facts/resources/skills      |
-| `sync_skill`                | Sync skill after file edit                |
-| `delete_skills`             | Remove skills                             |
-| `submit_execution_logs`     | Record command/test/build executions      |
-| `search_execution_logs`     | Find executions by query, tags, success   |
-| `get_execution_log`         | Get execution details by ID               |
-| `check_stale`               | Find stale resources and dependencies     |
-| `mark_resources_refreshed`  | Mark resources as current                 |
-| `create_tags`               | Create organizational tags                |
-| `list_tags`                 | List tags with usage counts               |
-| `get_config` / `set_config` | Manage configuration                      |
+| `restore_resources`         | Restore soft-deleted resources            |
+
+### Skills
+
+| Tool                   | Description                          |
+| ---------------------- | ------------------------------------ |
+| `create_skill`         | Create markdown skill document       |
+| `update_skill`         | Update skill metadata/references     |
+| `search_skills`        | Find skills by tags or query         |
+| `get_skills`           | Get skills by name with content      |
+| `link_skill`           | Link skill to facts/resources/skills |
+| `sync_skill`           | Sync skill after file edit           |
+| `delete_skills`        | Remove skills                        |
+| `get_dependency_graph` | Get skill dependency tree            |
+| `restore_skills`       | Restore soft-deleted skills          |
+
+### Execution Logs
+
+| Tool                    | Description                             |
+| ----------------------- | --------------------------------------- |
+| `submit_execution_logs` | Record command/test/build executions    |
+| `search_execution_logs` | Find executions by query, tags, success |
+| `get_execution_log`     | Get execution details by ID             |
+
+### Tags
+
+| Tool                | Description                 |
+| ------------------- | --------------------------- |
+| `create_tags`       | Create organizational tags  |
+| `list_tags`         | List tags with usage counts |
+| `prune_orphan_tags` | Clean up unused orphan tags |
+
+### Configuration
+
+| Tool                | Description                             |
+| ------------------- | --------------------------------------- |
+| `get_config`        | Get a configuration value by key        |
+| `set_config`        | Set a configuration value               |
+| `delete_config`     | Delete a configuration value            |
+| `list_config`       | List all configuration with schema      |
+| `get_config_schema` | Get available options with descriptions |
+
+### Maintenance
+
+| Tool                       | Description                           |
+| -------------------------- | ------------------------------------- |
+| `check_stale`              | Find stale resources and dependencies |
+| `mark_resources_refreshed` | Mark resources as current             |
+
+### Context & Guides
+
+| Tool                     | Description                                      |
+| ------------------------ | ------------------------------------------------ |
+| `get_knowledge_context`  | Build context from tags (facts/resources/skills) |
+| `build_skill_context`    | Get skill with formatted content and refs        |
+| `get_maintenance_report` | Generate staleness/maintenance report            |
+| `get_refresh_guide`      | Get instructions for refreshing a resource       |
+| `get_agent_guide`        | Get the agent workflow guide (call first)        |
+| `get_concept_guide`   | Get conceptual overview and design philosophy    |
 
 ## MCP Prompts
 

@@ -53,6 +53,29 @@ export const factRestoreOutput = z.object({
 	restored: z.number().describe("Number of facts restored"),
 });
 
+export const factVerifyOutput = z.object({
+	success: z.literal(true),
+	verifiedIds: z.array(z.number()),
+});
+
+export const factDeleteOutput = z.object({
+	success: z.literal(true),
+	deleted: z.number().describe("Number of facts deleted"),
+});
+
+export const factUpdateOutput = z.object({
+	success: z.boolean(),
+	id: z.number(),
+	content: z.string(),
+	tagsAdded: z.array(z.string()).optional(),
+	tagsRemoved: z.array(z.string()).optional(),
+});
+
+export const factVerifyByTagsOutput = z.object({
+	verified: z.number(),
+	factIds: z.array(z.number()),
+});
+
 export const factUpdateInput = z
 	.object({
 		id: z
@@ -148,3 +171,7 @@ export type FactRestoreInput = z.infer<typeof factRestoreInput>;
 export type FactSubmitOutput = z.infer<typeof factSubmitOutput>;
 export type FactSearchOutput = z.infer<typeof factSearchOutput>;
 export type FactRestoreOutput = z.infer<typeof factRestoreOutput>;
+export type FactVerifyOutput = z.infer<typeof factVerifyOutput>;
+export type FactDeleteOutput = z.infer<typeof factDeleteOutput>;
+export type FactUpdateOutput = z.infer<typeof factUpdateOutput>;
+export type FactVerifyByTagsOutput = z.infer<typeof factVerifyByTagsOutput>;

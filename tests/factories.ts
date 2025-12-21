@@ -26,6 +26,7 @@ export const factories = {
 	): ResourceAddInput["resources"][0] => ({
 		uri: `file:///test/file-${uniqueId()}.ts`,
 		type: "file",
+		description: `Test resource ${uniqueId()}`,
 		tags: ["test"],
 		...overrides,
 	}),
@@ -39,6 +40,7 @@ export const factories = {
 	skill: (overrides?: Partial<SkillCreateInput>): SkillCreateInput => ({
 		name: `test-skill-${uniqueId()}`,
 		title: `Test Skill ${uniqueId()}`,
+		description: `A test skill for testing purposes`,
 		content: "# Test\n\nThis is a test skill.",
 		tags: ["test"],
 		...overrides,
