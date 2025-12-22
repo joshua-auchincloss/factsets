@@ -3,7 +3,7 @@ import { getConfig, parseJsonConfig } from "./config.js";
 
 /**
  * Tag synonyms: alias -> canonical
- * Example: { "db": "database", "ts": "typescript" }
+ * Example: { "db": "database", "docs": "documentation" }
  */
 export type TagSynonyms = Record<string, string>;
 

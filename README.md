@@ -15,6 +15,7 @@ A self-maintaining knowledge base for AI agents, exposed via the
 - **Self-Maintaining** - Staleness detection with refresh instructions
 - **Tag-Based Organization** - Flexible categorization and retrieval
 - **Skill Documents** - Markdown files for procedural knowledge
+- **User Preferences** - Configurable output style and agent behavior
 - **MCP Protocol** - Standard interface for AI tool/prompt definitions
 
 ## Installation
@@ -162,6 +163,15 @@ See [Configuration Guide](docs/config.md) for all options.
 | `delete_config`     | Delete a configuration value            |
 | `list_config`       | List all configuration with schema      |
 | `get_config_schema` | Get available options with descriptions |
+
+### User Preferences
+
+| Tool                   | Description                                |
+| ---------------------- | ------------------------------------------ |
+| `get_preference_prompt`| Get natural language preference prompt     |
+| `get_user_preferences` | Get structured preference data             |
+| `infer_preference`     | Update preference from user behavior       |
+| `reset_preferences`    | Reset preferences to defaults              |
 
 ### Maintenance
 

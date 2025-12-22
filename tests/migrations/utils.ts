@@ -46,8 +46,9 @@ export function getReleaseTags(): string[] {
  */
 export async function getPublishedVersions(): Promise<string[]> {
 	try {
-		const output = execSync("npm view factsets versions --json 2>/dev/null", {
+		const output = execSync("npm view factsets versions --json", {
 			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "ignore"],
 		});
 		const versions = JSON.parse(output) as string[];
 		return sortVersions(versions).filter((v) =>
@@ -93,8 +94,9 @@ export function tagToVersion(tag: string): string {
  */
 export async function isVersionPublished(version: string): Promise<boolean> {
 	try {
-		execSync(`npm view factsets@${version} version 2>/dev/null`, {
+		execSync(`npm view factsets@${version} version`, {
 			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "ignore"],
 		});
 		return true;
 	} catch {

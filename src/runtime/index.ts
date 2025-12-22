@@ -16,6 +16,10 @@ export {
 	DEFAULT_WORKER_INTERVALS,
 	CONFIG_SCHEMA,
 	type ConfigKey,
+	type ConfigCategory,
+	type ConfigType,
+	type ConfigEntry,
+	type ConfigSchemaType,
 	type SnapshotOverflowBehavior,
 } from "./defaults.js";
 

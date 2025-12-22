@@ -8,6 +8,6 @@ export default defineConfig({
 	verbose: true,
 	strict: true,
 	migrations: {
-		prefix: "index"
-	}
+		prefix: "index",
+	},
 });

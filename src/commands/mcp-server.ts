@@ -12,6 +12,7 @@ import { registerContextTools } from "../tools/context.js";
 import { registerConfigTools } from "../tools/config.js";
 import { registerPromptTools } from "../tools/prompts.js";
 import { registerExecutionLogTools } from "../tools/execution-logs.js";
+import { registerPreferencesTools } from "../tools/preferences.js";
 import { registerKnowledgePrompts } from "../prompts/knowledge.js";
 import { registerMaintenancePrompts } from "../prompts/maintenance.js";
 import { setRuntimeConfig } from "../runtime-config.js";
@@ -120,6 +121,7 @@ export const mcpServerHandler = async (
 	registerConfigTools(server, db);
 	registerPromptTools(server, db);
 	registerExecutionLogTools(server, db);
+	registerPreferencesTools(server, db);
 
 	registerStaticPrompts(server);
 	registerKnowledgePrompts(server, db);

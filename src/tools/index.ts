@@ -5,3 +5,4 @@ export * from "./skills.js";
 export * from "./context.js";
 export * from "./config.js";
 export * from "./prompts.js";
+export * from "./preferences.js";

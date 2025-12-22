@@ -2,6 +2,8 @@
 
 Factsets supports configuration via CLI flags and runtime settings. Configuration persists in the SQLite database.
 
+> **For agents**: Call `get_config_schema` to get the definitive, up-to-date configuration schema with all available keys, types, defaults, and valid values. This document provides context and examples, but the schema tool is the authoritative reference.
+
 ## CLI Flags
 
 ### mcp-server Command
@@ -35,7 +37,7 @@ The `watch-files` command runs a standalone file watcher that automatically sync
 
 ## Runtime Configuration
 
-Use the `set_config` / `get_config` tools to manage configuration at runtime.
+Use the `set_config` / `get_config` tools to manage configuration at runtime. Use `get_config_schema` to see all available configuration keys with their types, defaults, and valid values.
 
 ### client
 
@@ -88,6 +90,8 @@ CLI flags take precedence over environment variables.
 ## Freshness Configuration
 
 Factsets uses category-based freshness thresholds to determine when resources are stale. Each category has a configurable threshold in hours.
+
+> Call `get_config_schema` for the complete list of freshness keys and their current defaults.
 
 ### Categories and Defaults
 
@@ -219,14 +223,14 @@ bunx factsets mcp-server --no-seed
 
 Fine-tune how many results are returned from search operations:
 
-| Config Key                    | Default | Description                       |
-| ----------------------------- | ------- | --------------------------------- |
-| `search_limit_tags`           | 100     | Maximum tags returned             |
-| `search_limit_facts`          | 50      | Maximum facts returned            |
-| `search_limit_resources`      | 100     | Maximum resources returned        |
-| `search_limit_skills`         | 30      | Maximum skills returned           |
-| `search_limit_execution_logs` | 50      | Maximum execution logs returned   |
-| `search_include_deleted`      | false   | Include soft-deleted items        |
+| Config Key                    | Default | Description                     |
+| ----------------------------- | ------- | ------------------------------- |
+| `search_limit_tags`           | 100     | Maximum tags returned           |
+| `search_limit_facts`          | 50      | Maximum facts returned          |
+| `search_limit_resources`      | 100     | Maximum resources returned      |
+| `search_limit_skills`         | 30      | Maximum skills returned         |
+| `search_limit_execution_logs` | 50      | Maximum execution logs returned |
+| `search_include_deleted`      | false   | Include soft-deleted items      |
 
 ```json
 // Increase facts limit for research tasks
@@ -237,11 +241,11 @@ Fine-tune how many results are returned from search operations:
 
 Control how much content is included in knowledge context responses:
 
-| Config Key               | Default | Description                         |
-| ------------------------ | ------- | ----------------------------------- |
-| `context_budget_facts`   | 50      | Max facts in knowledge context      |
-| `context_budget_resources` | 20    | Max resources in knowledge context  |
-| `context_budget_skills`  | 10      | Max skills in knowledge context     |
+| Config Key                 | Default | Description                        |
+| -------------------------- | ------- | ---------------------------------- |
+| `context_budget_facts`     | 50      | Max facts in knowledge context     |
+| `context_budget_resources` | 20      | Max resources in knowledge context |
+| `context_budget_skills`    | 10      | Max skills in knowledge context    |
 
 These budgets apply to `get_knowledge_context` and the `knowledge_context` prompt.
 
@@ -257,9 +261,9 @@ These budgets apply to `get_knowledge_context` and the `knowledge_context` promp
 
 Define equivalent tags that should be treated as the same during search:
 
-| Config Key      | Type   | Default |
-| --------------- | ------ | ------- |
-| `tag_synonyms`  | JSON   | `{}`    |
+| Config Key     | Type | Default |
+| -------------- | ---- | ------- |
+| `tag_synonyms` | JSON | `{}`    |
 
 ```json
 // Set up synonyms
@@ -275,9 +279,9 @@ When searching for `js`, results tagged with `javascript` will also be included 
 
 Define parent-child relationships between tags. Searching for a parent includes all children:
 
-| Config Key        | Type   | Default |
-| ----------------- | ------ | ------- |
-| `tag_hierarchies` | JSON   | `{}`    |
+| Config Key        | Type | Default |
+| ----------------- | ---- | ------- |
+| `tag_hierarchies` | JSON | `{}`    |
 
 ```json
 // Backend tag includes all backend languages
@@ -293,9 +297,9 @@ Searching for `backend` will return results tagged with `python`, `node`, `go`, 
 
 Enforce that certain entity types must have specific tags:
 
-| Config Key      | Type   | Default |
-| --------------- | ------ | ------- |
-| `required_tags` | JSON   | `{}`    |
+| Config Key      | Type | Default |
+| --------------- | ---- | ------- |
+| `required_tags` | JSON | `{}`    |
 
 ```json
 // Require project tag on facts, and team prefix on skills
@@ -306,6 +310,7 @@ Enforce that certain entity types must have specific tags:
 ```
 
 Supported patterns:
+
 - Exact match: `"project"` - tag must be exactly "project"
 - Prefix match: `"team-*"` - tag must start with "team-"
 
@@ -315,20 +320,20 @@ Entity types: `fact`, `resource`, `skill`
 
 Control how resource snapshots are stored and managed:
 
-| Config Key                     | Default     | Description                                    |
-| ------------------------------ | ----------- | ---------------------------------------------- |
-| `snapshot_max_size_kb`         | 100         | Max snapshot size in KB before overflow        |
-| `snapshot_overflow_behavior`   | `truncate`  | What to do when snapshot exceeds max size      |
-| `snapshot_retention_versions`  | 3           | Number of snapshot versions to retain          |
+| Config Key                    | Default    | Description                               |
+| ----------------------------- | ---------- | ----------------------------------------- |
+| `snapshot_max_size_kb`        | 100        | Max snapshot size in KB before overflow   |
+| `snapshot_overflow_behavior`  | `truncate` | What to do when snapshot exceeds max size |
+| `snapshot_retention_versions` | 3          | Number of snapshot versions to retain     |
 
 ### Overflow Behaviors
 
-| Behavior        | Description                                              |
-| --------------- | -------------------------------------------------------- |
-| `truncate`      | Cut content at the size limit                            |
-| `summarize`     | Attempt to summarize or extract key content              |
-| `remove_noise`  | Remove HTML, boilerplate, whitespace before truncating   |
-| `auto`          | Use `remove_noise` first, then `truncate` if still large |
+| Behavior       | Description                                              |
+| -------------- | -------------------------------------------------------- |
+| `truncate`     | Cut content at the size limit                            |
+| `summarize`    | Attempt to summarize or extract key content              |
+| `remove_noise` | Remove HTML, boilerplate, whitespace before truncating   |
+| `auto`         | Use `remove_noise` first, then `truncate` if still large |
 
 ```json
 // Larger snapshots with noise removal
@@ -340,25 +345,25 @@ Control how resource snapshots are stored and managed:
 
 ### Auto Prune Orphan Tags
 
-| Config Key              | Default | Description                          |
-| ----------------------- | ------- | ------------------------------------ |
-| `auto_prune_orphan_tags`| false   | Automatically prune unused tags      |
+| Config Key               | Default | Description                     |
+| ------------------------ | ------- | ------------------------------- |
+| `auto_prune_orphan_tags` | false   | Automatically prune unused tags |
 
 When enabled, tags with zero usage are automatically removed during background maintenance.
 
 ### Soft Delete Retention
 
-| Config Key                  | Default | Description                           |
-| --------------------------- | ------- | ------------------------------------- |
-| `soft_delete_retention_days`| 7       | Days to retain soft-deleted items     |
+| Config Key                   | Default | Description                       |
+| ---------------------------- | ------- | --------------------------------- |
+| `soft_delete_retention_days` | 7       | Days to retain soft-deleted items |
 
 After this period, soft-deleted items are hard-deleted by the background worker.
 
 ### Staleness Warning Threshold
 
-| Config Key                    | Default | Description                              |
-| ----------------------------- | ------- | ---------------------------------------- |
-| `staleness_warning_threshold` | 0.8     | Fraction (0.0-1.0) before warning        |
+| Config Key                    | Default | Description                       |
+| ----------------------------- | ------- | --------------------------------- |
+| `staleness_warning_threshold` | 0.8     | Fraction (0.0-1.0) before warning |
 
 When a resource reaches this percentage of its max age, it's flagged as "approaching stale" in `get_knowledge_context`:
 
@@ -379,13 +384,13 @@ bunx factsets worker --database-url .facts.db
 
 ### Worker Task Intervals
 
-| Config Key                        | Default  | Description                          |
-| --------------------------------- | -------- | ------------------------------------ |
-| `worker_interval_auto_verify`     | 3600000  | Auto-verify old facts (ms)           |
-| `worker_interval_expire_facts`    | 7200000  | Expire unverified facts (ms)         |
-| `worker_interval_prune_snapshots` | 86400000 | Prune old snapshot versions (ms)     |
-| `worker_interval_prune_tags`      | 86400000 | Prune orphan tags (ms)               |
-| `worker_interval_hard_delete`     | 86400000 | Hard-delete expired soft deletes (ms)|
+| Config Key                        | Default  | Description                           |
+| --------------------------------- | -------- | ------------------------------------- |
+| `worker_interval_auto_verify`     | 3600000  | Auto-verify old facts (ms)            |
+| `worker_interval_expire_facts`    | 7200000  | Expire unverified facts (ms)          |
+| `worker_interval_prune_snapshots` | 86400000 | Prune old snapshot versions (ms)      |
+| `worker_interval_prune_tags`      | 86400000 | Prune orphan tags (ms)                |
+| `worker_interval_hard_delete`     | 86400000 | Hard-delete expired soft deletes (ms) |
 
 Default values: auto-verify (1h), expire facts (2h), others (24h).
 
@@ -396,12 +401,12 @@ Default values: auto-verify (1h), expire facts (2h), others (24h).
 
 ### Worker Tasks
 
-| Task           | Description                                                |
-| -------------- | ---------------------------------------------------------- |
-| Auto-verify    | Mark unverified facts older than 7 days as verified        |
-| Expire facts   | Soft-delete unverified facts older than 30 days            |
-| Prune tags     | Remove tags with zero usage (if `auto_prune_orphan_tags`)  |
-| Hard delete    | Permanently remove items past `soft_delete_retention_days` |
+| Task         | Description                                                |
+| ------------ | ---------------------------------------------------------- |
+| Auto-verify  | Mark unverified facts older than 7 days as verified        |
+| Expire facts | Soft-delete unverified facts older than 30 days            |
+| Prune tags   | Remove tags with zero usage (if `auto_prune_orphan_tags`)  |
+| Hard delete  | Permanently remove items past `soft_delete_retention_days` |
 
 Worker state is persisted in the database, so it survives restarts and resumes from where it left off.
 
@@ -411,17 +416,17 @@ Worker state is persisted in the database, so it survives restarts and resumes f
 
 Experimental: Assign weights to tags for relevance scoring.
 
-| Config Key           | Type   | Default |
-| -------------------- | ------ | ------- |
+| Config Key             | Type | Default |
+| ---------------------- | ---- | ------- |
 | `tag_affinity_weights` | JSON | `{}`    |
 
 ### Source Type Trust
 
 Configure trust levels for different fact source types:
 
-| Config Key          | Type   | Default                                                  |
-| ------------------- | ------ | -------------------------------------------------------- |
-| `source_type_trust` | JSON   | `{"user": 1.0, "documentation": 0.9, "code": 0.8, "inference": 0.6}` |
+| Config Key          | Type | Default                                                              |
+| ------------------- | ---- | -------------------------------------------------------------------- |
+| `source_type_trust` | JSON | `{"user": 0.9, "documentation": 0.9, "code": 0.8, "inference": 0.6}` |
 
 ```json
 // Lower trust for AI-inferred facts
@@ -446,4 +451,142 @@ Use `list_config` to see all current settings:
 }
 ```
 
-Use `get_config_schema` to see all available configuration options with their types and defaults.
+## User Preferences
+
+User preferences control how agents generate responses, code, and documentation. These preferences are automatically applied when generating output and can be inferred from user feedback.\n\n> Call `get_config_schema` for the complete list of 30+ preference keys with their types, defaults, and valid values.
+
+### Preference Tools
+
+| Tool                    | Description                                            |
+| ----------------------- | ------------------------------------------------------ |
+| `get_user_preferences`  | Get all preferences as structured JSON                 |
+| `get_preference_prompt` | Get natural language prompt describing all preferences |
+| `infer_preference`      | Update a preference based on user feedback             |
+| `reset_preferences`     | Reset preferences to defaults                          |
+
+### Communication & Response Style
+
+| Config Key           | Default   | Values                                                        | Description        |
+| -------------------- | --------- | ------------------------------------------------------------- | ------------------ |
+| `pref_tone`          | `neutral` | `formal`, `neutral`, `casual`, `technical`                    | Communication tone |
+| `pref_verbosity`     | `concise` | `minimal`, `concise`, `balanced`, `detailed`, `comprehensive` | Response length    |
+| `pref_emoji_usage`   | `banned`  | `banned`, `minimal`, `moderate`, `liberal`                    | Emoji policy       |
+| `pref_special_chars` | `banned`  | `banned`, `minimal`, `allowed`                                | Decorative unicode |
+| `pref_personality`   | `direct`  | `direct`, `friendly`, `professional`, `instructive`           | Interaction style  |
+
+**Note**: `banned` values are strictly enforced - agents must not use any emojis or decorative unicode when these are set.
+
+### Response Structure
+
+| Config Key                | Default            | Values                                | Description              |
+| ------------------------- | ------------------ | ------------------------------------- | ------------------------ |
+| `pref_structure_style`    | `flat`             | `flat`, `hierarchical`, `progressive` | Information organization |
+| `pref_summary_position`   | `omit`             | `omit`, `first`, `last`, `both`       | TL;DR placement          |
+| `pref_use_headers`        | `true`             | `true`, `false`                       | Markdown headers         |
+| `pref_use_lists`          | `when_appropriate` | `avoid`, `when_appropriate`, `prefer` | List usage               |
+| `pref_section_dividers`   | `banned`           | `banned`, `minimal`, `allowed`        | Section dividers/rules   |
+| `pref_code_block_context` | `minimal`          | `omit`, `minimal`, `moderate`, `full` | Code explanation         |
+
+### Code Output
+
+| Config Key                   | Default       | Values                                              | Description            |
+| ---------------------------- | ------------- | --------------------------------------------------- | ---------------------- |
+| `pref_code_comments`         | `minimal`     | `banned`, `minimal`, `moderate`, `verbose`          | Inline comments        |
+| `pref_code_inline_comments`  | `critical`    | `banned`, `critical`, `logical_branches`, `verbose` | Function body comments |
+| `pref_code_banners`          | `banned`      | `banned`, `minimal`, `allowed`                      | Decorative banners     |
+| `pref_code_docstrings`       | `public_only` | `omit`, `public_only`, `all`                        | Docstrings             |
+| `pref_code_type_annotations` | `explicit`    | `minimal`, `inferred`, `explicit`, `strict`         | Type annotations       |
+| `pref_code_error_handling`   | `defensive`   | `minimal`, `defensive`, `comprehensive`             | Error handling         |
+| `pref_code_naming_notes`     | `null`        | freeform                                            | Naming conventions     |
+| `pref_code_line_length`      | `100`         | 60-200                                              | Line length target     |
+| `pref_code_imports_style`    | `grouped`     | `minimal`, `explicit`, `grouped`                    | Import organization    |
+
+### Documentation Output
+
+| Config Key                  | Default    | Values                                         | Description     |
+| --------------------------- | ---------- | ---------------------------------------------- | --------------- |
+| `pref_docs_format`          | `markdown` | `plain`, `markdown`, `rich`                    | Format          |
+| `pref_docs_examples`        | `minimal`  | `omit`, `minimal`, `moderate`, `comprehensive` | Examples        |
+| `pref_docs_diagrams`        | `omit`     | `omit`, `ascii`, `mermaid`                     | Diagrams        |
+| `pref_docs_technical_depth` | `balanced` | `simplified`, `balanced`, `detailed`, `expert` | Technical depth |
+
+### Interaction Behavior
+
+| Config Key              | Default           | Values                                        | Description           |
+| ----------------------- | ----------------- | --------------------------------------------- | --------------------- |
+| `pref_confirmations`    | `minimal`         | `skip`, `minimal`, `always`                   | Confirmation requests |
+| `pref_suggestions`      | `when_relevant`   | `omit`, `when_relevant`, `proactive`          | Proactive suggestions |
+| `pref_questions`        | `clarifying_only` | `avoid`, `clarifying_only`, `exploratory`     | Question behavior     |
+| `pref_error_detail`     | `actionable`      | `minimal`, `actionable`, `diagnostic`, `full` | Error reporting       |
+| `pref_progress_updates` | `false`           | `true`, `false`                               | Progress on long ops  |
+
+### Language & Format
+
+| Config Key             | Default    | Values                              | Description       |
+| ---------------------- | ---------- | ----------------------------------- | ----------------- |
+| `pref_language`        | `en`       | ISO 639-1                           | Response language |
+| `pref_technical_terms` | `standard` | `simplified`, `standard`, `precise` | Terminology level |
+| `pref_date_format`     | `ISO`      | `ISO`, `US`, `EU`, `relative`       | Date format       |
+| `pref_number_format`   | `standard` | `standard`, `grouped`               | Number format     |
+
+### Using get_preference_prompt
+
+The `get_preference_prompt` tool generates a natural language description of all preferences:
+
+```
+# User Preferences
+
+Follow these preferences when generating responses:
+
+- User prefers neutral, balanced tone
+...
+- User prefers standard number format
+```
+
+### Inferring Preferences
+
+Use `infer_preference` when a user expresses a preference:
+
+```json
+// User says "no emojis please"
+{
+  "key": "pref_emoji_usage",
+  "value": "banned",
+  "reason": "User explicitly requested no emojis",
+  "confidence": 1.0,
+  "explicit": true
+}
+
+// Agent infers user prefers concise responses
+{
+  "key": "pref_verbosity",
+  "value": "minimal",
+  "reason": "User consistently asks for shorter responses",
+  "confidence": 0.85,
+  "explicit": false
+}
+```
+
+**Inference rules:**
+
+- Explicit preferences (`explicit: true`) are always applied
+- Inferred preferences require `confidence >= 0.8`
+- Inferred preferences don't override explicit user settings
+
+### Examples
+
+```json
+// User wants verbose code documentation
+{ "key": "pref_code_comments", "value": "verbose" }
+{ "key": "pref_code_docstrings", "value": "all" }
+
+// User wants minimal interaction
+{ "key": "pref_confirmations", "value": "skip" }
+{ "key": "pref_questions", "value": "avoid" }
+{ "key": "pref_suggestions", "value": "omit" }
+
+// User wants detailed explanations
+{ "key": "pref_verbosity", "value": "detailed" }
+{ "key": "pref_code_block_context", "value": "full" }
+{ "key": "pref_docs_technical_depth", "value": "expert" }
+```

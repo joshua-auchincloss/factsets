@@ -155,10 +155,6 @@ export function parseNumberConfig(
 	return Number.isNaN(num) ? defaultValue : num;
 }
 
-// ============================================================================
-// Search & Context Config Helpers
-// ============================================================================
-
 import {
 	DEFAULT_SEARCH_LIMITS,
 	DEFAULT_CONTEXT_BUDGETS,

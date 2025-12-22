@@ -122,9 +122,6 @@ async function refreshWatchers(db: DB): Promise<void> {
 	}
 }
 
-/**
- * Scan the skills directory for new .md files not yet registered
- */
 async function scanForNewSkills(db: DB): Promise<void> {
 	const skillsDir = await resolveSkillsDir(db);
 	const absoluteSkillsDir = toAbsolutePath(skillsDir);
@@ -159,9 +156,6 @@ async function scanForNewSkills(db: DB): Promise<void> {
 	}
 }
 
-/**
- * Handle deleted skill files - remove from DB
- */
 async function handleDeletedSkills(db: DB): Promise<void> {
 	const allSkills = await db.select().from(skills);
 
@@ -174,9 +168,6 @@ async function handleDeletedSkills(db: DB): Promise<void> {
 	}
 }
 
-/**
- * Watch the skills directory for new files
- */
 async function watchSkillsDirectory(db: DB): Promise<void> {
 	const skillsDir = await resolveSkillsDir(db);
 	const absoluteSkillsDir = toAbsolutePath(skillsDir);
@@ -255,9 +246,6 @@ async function watchSkillsDirectory(db: DB): Promise<void> {
 	}
 }
 
-/**
- * Check if skills directory has changed and handle migration
- */
 async function checkSkillsDirChange(db: DB): Promise<boolean> {
 	const newSkillsDir = await resolveSkillsDir(db);
 

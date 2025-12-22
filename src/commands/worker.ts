@@ -10,14 +10,8 @@ import { sql, lt, and, isNotNull, eq } from "drizzle-orm";
 
 type Handler = CommandHandler<"worker">;
 
-/**
- * Task names for worker state tracking
- */
 type TaskName = "autoVerify" | "expireFacts" | "pruneTags" | "hardDelete";
 
-/**
- * Worker state persisted to database
- */
 interface TaskState {
 	taskName: string;
 	lastRunAt: string | null;
@@ -26,9 +20,6 @@ interface TaskState {
 	itemsProcessed: number;
 }
 
-/**
- * Load task state from database
- */
 async function loadTaskState(db: DB, taskName: TaskName): Promise<TaskState> {
 	const result = await db
 		.select()
@@ -56,9 +47,6 @@ async function loadTaskState(db: DB, taskName: TaskName): Promise<TaskState> {
 	};
 }
 
-/**
- * Save task state to database (upsert)
- */
 async function saveTaskState(
 	db: DB,
 	state: Omit<TaskState, "taskName"> & { taskName: TaskName },
@@ -85,9 +73,6 @@ async function saveTaskState(
 		});
 }
 
-/**
- * Get interval for a task from config, falling back to defaults
- */
 async function getTaskInterval(db: DB, task: TaskName): Promise<number> {
 	const configKeyMap: Record<TaskName, string> = {
 		autoVerify: "worker_interval_auto_verify",
@@ -113,9 +98,6 @@ async function getTaskInterval(db: DB, task: TaskName): Promise<number> {
 	return defaultMap[task];
 }
 
-/**
- * Check if a task should run based on its interval and last run time
- */
 function shouldRunTask(state: TaskState, intervalMs: number): boolean {
 	if (!state.lastRunAt) return true;
 
@@ -124,10 +106,6 @@ function shouldRunTask(state: TaskState, intervalMs: number): boolean {
 	return now - lastRun >= intervalMs;
 }
 
-/**
- * Auto-verify old unverified facts that have been retrieved
- * Only verifies facts from user, documentation, code sources (not inference)
- */
 async function runAutoVerify(db: DB): Promise<Omit<TaskState, "taskName">> {
 	const startTime = nowISO();
 
@@ -194,9 +172,6 @@ async function runAutoVerify(db: DB): Promise<Omit<TaskState, "taskName">> {
 	}
 }
 
-/**
- * Soft-delete unverified facts older than expiration threshold
- */
 async function runExpireFacts(db: DB): Promise<Omit<TaskState, "taskName">> {
 	const startTime = nowISO();
 
@@ -250,9 +225,6 @@ async function runExpireFacts(db: DB): Promise<Omit<TaskState, "taskName">> {
 	}
 }
 
-/**
- * Prune orphan tags if auto-prune is enabled
- */
 async function runPruneTags(db: DB): Promise<Omit<TaskState, "taskName">> {
 	const startTime = nowISO();
 
@@ -286,9 +258,6 @@ async function runPruneTags(db: DB): Promise<Omit<TaskState, "taskName">> {
 	}
 }
 
-/**
- * Hard-delete items that were soft-deleted beyond retention period
- */
 async function runHardDelete(db: DB): Promise<Omit<TaskState, "taskName">> {
 	const startTime = nowISO();
 
@@ -344,9 +313,6 @@ async function runHardDelete(db: DB): Promise<Omit<TaskState, "taskName">> {
 	}
 }
 
-/**
- * Run all worker tasks based on their intervals, loading/saving state from DB
- */
 async function runWorkerCycle(db: DB): Promise<void> {
 	const tasks: Array<{
 		name: TaskName;
@@ -380,9 +346,6 @@ async function runWorkerCycle(db: DB): Promise<void> {
 	}
 }
 
-/**
- * Main worker handler
- */
 export const workerHandler: Handler = async (config) => {
 	const db = createConnection(config.databaseUrl);
 	await runMigrations(db);

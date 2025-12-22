@@ -94,20 +94,20 @@ No parameters.
 
 Control how long before resources are considered stale:
 
-| Key                         | Default | Description                                |
-| --------------------------- | ------- | ------------------------------------------ |
-| `freshness_source_code`     | 12      | Source code files (.ts, .js, .py, etc.)    |
-| `freshness_lock_files`      | 168     | Lock files (package-lock.json, etc.)       |
-| `freshness_config_files`    | 24      | Config files (tsconfig.json, etc.)         |
-| `freshness_documentation`   | 72      | Documentation (.md, /docs/)                |
-| `freshness_generated_files` | 1       | Generated files (/dist/, .min.js)          |
-| `freshness_api_schemas`     | 24      | API schemas (.graphql, .proto)             |
-| `freshness_database`        | 72      | Database files (.sql, /migrations/)        |
-| `freshness_scripts`         | 72      | Scripts (.sh, Makefiles)                   |
-| `freshness_tests`           | 24      | Test files (.test.ts, /__tests__/)         |
-| `freshness_assets`          | 168     | Assets (images, fonts, media)              |
-| `freshness_infrastructure`  | 24      | Infrastructure (Terraform, Docker, K8s)    |
-| `freshness_default`         | 168     | Default for unmatched files                |
+| Key                         | Default | Description                             |
+| --------------------------- | ------- | --------------------------------------- |
+| `freshness_source_code`     | 12      | Source code files (.ts, .js, .py, etc.) |
+| `freshness_lock_files`      | 168     | Lock files (package-lock.json, etc.)    |
+| `freshness_config_files`    | 24      | Config files (tsconfig.json, etc.)      |
+| `freshness_documentation`   | 72      | Documentation (.md, /docs/)             |
+| `freshness_generated_files` | 1       | Generated files (/dist/, .min.js)       |
+| `freshness_api_schemas`     | 24      | API schemas (.graphql, .proto)          |
+| `freshness_database`        | 72      | Database files (.sql, /migrations/)     |
+| `freshness_scripts`         | 72      | Scripts (.sh, Makefiles)                |
+| `freshness_tests`           | 24      | Test files (.test.ts, /**tests**/)      |
+| `freshness_assets`          | 168     | Assets (images, fonts, media)           |
+| `freshness_infrastructure`  | 24      | Infrastructure (Terraform, Docker, K8s) |
+| `freshness_default`         | 168     | Default for unmatched files             |
 
 #### Search Limits
 
@@ -126,31 +126,31 @@ Control maximum results for search operations:
 
 Control `get_knowledge_context` output size:
 
-| Key                      | Default | Description                       |
-| ------------------------ | ------- | --------------------------------- |
-| `context_budget_facts`   | 50      | Max facts in knowledge context    |
-| `context_budget_resources` | 20    | Max resources in knowledge context|
-| `context_budget_skills`  | 10      | Max skills in knowledge context   |
+| Key                        | Default | Description                        |
+| -------------------------- | ------- | ---------------------------------- |
+| `context_budget_facts`     | 50      | Max facts in knowledge context     |
+| `context_budget_resources` | 20      | Max resources in knowledge context |
+| `context_budget_skills`    | 10      | Max skills in knowledge context    |
 
 #### Tag Relationships
 
 Configure tag expansion for searches:
 
-| Key               | Type | Default | Description                            |
-| ----------------- | ---- | ------- | -------------------------------------- |
-| `tag_synonyms`    | JSON | `{}`    | Equivalent tags (e.g., `{"js": "javascript"}`) |
+| Key               | Type | Default | Description                                               |
+| ----------------- | ---- | ------- | --------------------------------------------------------- |
+| `tag_synonyms`    | JSON | `{}`    | Equivalent tags (e.g., `{"js": "javascript"}`)            |
 | `tag_hierarchies` | JSON | `{}`    | Parent-child tags (e.g., `{"backend": ["python", "go"]}`) |
-| `required_tags`   | JSON | `{}`    | Required tags per entity type          |
+| `required_tags`   | JSON | `{}`    | Required tags per entity type                             |
 
 #### Snapshot Management
 
 Control resource snapshot storage:
 
-| Key                           | Default    | Description                              |
-| ----------------------------- | ---------- | ---------------------------------------- |
-| `snapshot_max_size_kb`        | 100        | Max snapshot size in KB                  |
+| Key                           | Default    | Description                                     |
+| ----------------------------- | ---------- | ----------------------------------------------- |
+| `snapshot_max_size_kb`        | 100        | Max snapshot size in KB                         |
 | `snapshot_overflow_behavior`  | `truncate` | `truncate`, `summarize`, `remove_noise`, `auto` |
-| `snapshot_retention_versions` | 3          | Number of snapshot versions to retain    |
+| `snapshot_retention_versions` | 3          | Number of snapshot versions to retain           |
 
 #### Maintenance Settings
 
@@ -171,6 +171,24 @@ All values in milliseconds:
 | `worker_interval_prune_snapshots` | 86400000 | Prune old snapshots (24h)       |
 | `worker_interval_prune_tags`      | 86400000 | Prune orphan tags (24h)         |
 | `worker_interval_hard_delete`     | 86400000 | Hard-delete expired items (24h) |
+
+#### User Preferences
+
+Control agent output style and behavior. All keys prefixed with `pref_`:
+
+| Key                         | Default       | Values                                                        | Description                |
+| --------------------------- | ------------- | ------------------------------------------------------------- | -------------------------- |
+| `pref_tone`                 | `neutral`     | `formal`, `neutral`, `casual`, `technical`                    | Communication tone         |
+| `pref_verbosity`            | `concise`     | `minimal`, `concise`, `balanced`, `detailed`, `comprehensive` | Response verbosity         |
+| `pref_emoji_usage`          | `banned`      | `banned`, `minimal`, `moderate`, `liberal`                    | Emoji policy               |
+| `pref_special_chars`        | `banned`      | `banned`, `minimal`, `allowed`                                | Decorative unicode         |
+| `pref_section_dividers`     | `banned`      | `banned`, `minimal`, `allowed`                                | Section dividers/rules     |
+| `pref_code_comments`        | `minimal`     | `banned`, `minimal`, `moderate`, `verbose`                    | Inline code comments       |
+| `pref_code_inline_comments` | `critical`    | `banned`, `critical`, `logical_branches`, `verbose`           | Function body comments     |
+| `pref_code_banners`         | `banned`      | `banned`, `minimal`, `allowed`                                | Decorative banner comments |
+| `pref_code_docstrings`      | `public_only` | `omit`, `public_only`, `all`                                  | Docstring generation       |
+
+See [Configuration Guide](config.md) or call `get_config_guide` for full list of 30+ preference keys.
 
 ## Tags
 
@@ -905,12 +923,12 @@ bunx factsets worker --database-url .facts.db
 
 Worker tasks (intervals configurable via `worker_interval_*` keys):
 
-| Task         | Default Interval | Description                              |
-| ------------ | ---------------- | ---------------------------------------- |
-| Auto-verify  | 1 hour           | Mark old unverified facts as verified    |
-| Expire facts | 2 hours          | Soft-delete unverified facts > 30 days   |
-| Prune tags   | 24 hours         | Remove unused tags (if enabled)          |
-| Hard delete  | 24 hours         | Permanently remove expired soft-deletes  |
+| Task         | Default Interval | Description                             |
+| ------------ | ---------------- | --------------------------------------- |
+| Auto-verify  | 1 hour           | Mark old unverified facts as verified   |
+| Expire facts | 2 hours          | Soft-delete unverified facts > 30 days  |
+| Prune tags   | 24 hours         | Remove unused tags (if enabled)         |
+| Hard delete  | 24 hours         | Permanently remove expired soft-deletes |
 
 Worker state persists in the database and survives restarts.
 
@@ -996,12 +1014,87 @@ These tools provide the same functionality as prompts but with:
 
 These tools provide access to built-in documentation and guides:
 
-| Tool                   | Description                                                                                  |
-| ---------------------- | -------------------------------------------------------------------------------------------- |
-| `get_agent_guide`      | Call first. Returns the agent workflow guide with phases, best practices, and tool reference |
+| Tool                | Description                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| `get_agent_guide`   | Call first. Returns the agent workflow guide with phases, best practices, and tool reference |
 | `get_concept_guide` | Returns the conceptual overview explaining design philosophy, core concepts, and data model  |
 
 Usage: Agents should call `get_agent_guide` when first interacting with Factsets to understand the workflow.
+
+## User Preferences Tools
+
+These tools manage user output preferences. Agents should check preferences before generating output and update them when users express style preferences.
+
+### get_preference_prompt
+
+Get a natural language prompt describing all active user preferences. Call at session start and before generating significant output.
+
+No parameters.
+
+Returns formatted text suitable for inclusion in agent context.
+
+### get_user_preferences
+
+Get all user preferences as structured data.
+
+No parameters.
+
+Returns:
+
+```json
+{
+  "preferences": {
+    "tone": "neutral",
+    "verbosity": "concise",
+    "emojiUsage": "banned",
+    ...
+  },
+  "nonDefaults": ["pref_code_comments"],
+  "categories": {
+    "communication": { "tone": "neutral", ... },
+    "code": { "codeComments": "minimal", ... },
+    ...
+  }
+}
+```
+
+### infer_preference
+
+Update a user preference based on explicit statement or inferred behavior.
+
+| Name         | Type    | Required | Description                                       |
+| ------------ | ------- | -------- | ------------------------------------------------- |
+| `key`        | string  | yes      | Preference key (e.g., `pref_code_comments`)       |
+| `value`      | string  | yes      | New value                                         |
+| `reason`     | string  | yes      | Why this preference is being set                  |
+| `confidence` | number  | yes      | Confidence 0.0-1.0 (require >= 0.8 for inference) |
+| `explicit`   | boolean | yes      | True if user explicitly stated preference         |
+
+Example:
+
+```json
+{
+  "key": "pref_code_comments",
+  "value": "verbose",
+  "reason": "User explicitly requested more comments",
+  "confidence": 1.0,
+  "explicit": true
+}
+```
+
+### reset_preferences
+
+Reset preferences to default values.
+
+| Name   | Type     | Required | Description                             |
+| ------ | -------- | -------- | --------------------------------------- |
+| `keys` | string[] | no       | Specific keys to reset (all if omitted) |
+
+Returns:
+
+```json
+{ "reset": 5 }
+```
 
 ## Client Directory Mapping
 
