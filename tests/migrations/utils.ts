@@ -1,7 +1,7 @@
 import { unlink, access, stat } from "node:fs/promises";
 import semver from "semver";
 import packageJson from "../../package.json" with { type: "json" };
-
+import axios from "axios";
 export const IS_WINDOWS = process.platform === "win32";
 
 /**
@@ -65,7 +65,7 @@ export interface VersionInfo {
 const GITHUB_API_URL =
 	"https://api.github.com/repos/joshua-auchincloss/factsets";
 
-const TAGS: string[] = []
+const TAGS: string[] = [];
 
 /**
  * Fetch release tags from GitHub API.
@@ -76,37 +76,43 @@ export async function getReleaseTags(): Promise<string[]> {
 	if (TAGS.length > 0) {
 		return TAGS;
 	}
-	try {
-		const response = await fetch(`${GITHUB_API_URL}/tags`, {
-			headers: {
-				Accept: "application/vnd.github.v3+json",
-				"User-Agent": "factsets-migration-tests",
-			},
-		});
-
-		if (!response.ok) {
-			console.warn(`GitHub API returned ${response.status}`);
-			return [];
-		}
-
-		const tags = (await response.json()) as Array<{ name: string }>;
-		const versionTags = tags
-			.map((t) => t.name)
-			.filter((tag) => {
-				if (!/^v\d+\.\d+\.\d+/.test(tag)) return false;
-				const version = tag.replace(/^v/, "");
-				return semver.gte(version, MIN_TEST_VERSION);
+	for (let attempt = 1; attempt < 3; attempt++) {
+		try {
+			const response = await axios.get(`${GITHUB_API_URL}/tags`, {
+				headers: {
+					Accept: "application/vnd.github.v3+json",
+					"User-Agent": "factsets-migration-tests",
+				},
+				timeout: 30000,
 			});
 
-		// Sort by semver ascending (oldest first)
-		TAGS.push(...versionTags.sort((a, b) =>
-			semver.compare(a.replace(/^v/, ""), b.replace(/^v/, "")),
-		));
-		return TAGS;
-	} catch (error) {
-		console.warn("Failed to fetch tags from GitHub API:", error);
-		return [];
+			if (!response.status || response.status !== 200) {
+				console.warn(`GitHub API returned ${response.status}`);
+				return [];
+			}
+
+			const tags = response.data as Array<{ name: string }>;
+			const versionTags = tags
+				.map((t) => t.name)
+				.filter((tag) => {
+					if (!/^v\d+\.\d+\.\d+/.test(tag)) return false;
+					const version = tag.replace(/^v/, "");
+					return semver.gte(version, MIN_TEST_VERSION);
+				});
+
+			// Sort by semver ascending (oldest first)
+			TAGS.push(
+				...versionTags.sort((a, b) =>
+					semver.compare(a.replace(/^v/, ""), b.replace(/^v/, "")),
+				),
+			);
+			return TAGS;
+		} catch (error) {
+			console.warn("Failed to fetch tags from GitHub API:", error);
+			await sleep(attempt * 500); // Exponential backoff
+		}
 	}
+	return [];
 }
 
 /**
@@ -265,13 +271,13 @@ export function createVersionArgs(
 
 	if (isDevelopment) {
 		return {
-			command: "bun",
+			command: "./node_modules/.bin/bun",
 			args: ["src/main.ts", ...baseArgs],
 		};
 	}
 
 	return {
-		command: "bunx",
+		command: "./node_modules/.bin/bunx",
 		args: [`factsets@${normalizedVersion}`, ...baseArgs],
 	};
 }
