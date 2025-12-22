@@ -166,12 +166,12 @@ See [Configuration Guide](docs/config.md) for all options.
 
 ### User Preferences
 
-| Tool                   | Description                                |
-| ---------------------- | ------------------------------------------ |
-| `get_preference_prompt`| Get natural language preference prompt     |
-| `get_user_preferences` | Get structured preference data             |
-| `infer_preference`     | Update preference from user behavior       |
-| `reset_preferences`    | Reset preferences to defaults              |
+| Tool                    | Description                            |
+| ----------------------- | -------------------------------------- |
+| `get_preference_prompt` | Get natural language preference prompt |
+| `get_user_preferences`  | Get structured preference data         |
+| `infer_preference`      | Update preference from user behavior   |
+| `reset_preferences`     | Reset preferences to defaults          |
 
 ### Maintenance
 

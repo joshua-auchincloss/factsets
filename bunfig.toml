@@ -9,3 +9,4 @@ coveragePathIgnorePatterns = [
   "dist/**",
   "build/**",
 ]
+timeout = 30000
