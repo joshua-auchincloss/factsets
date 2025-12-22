@@ -18,9 +18,27 @@ import {
 	createVersionArgs,
 	sortVersions,
 	compareVersions,
+	IS_WINDOWS,
+	sleep,
 } from "./utils";
 
 const testDb = new MigrationTestDb("./.migrations-test.db");
+
+/**
+ * Safely close an MCP server with Windows-compatible cleanup
+ */
+async function closeServer(server: TestServer | null): Promise<void> {
+	if (!server) return;
+	try {
+		await server.client.close();
+	} catch {
+		// Ignore close errors
+	}
+	// On Windows, add delay to allow process to fully terminate and release file handles
+	if (IS_WINDOWS) {
+		await sleep(1000);
+	}
+}
 
 const extractText = <R extends Partial<CallToolResult>>(result: R): string => {
 	const textContent = result.content?.find((c) => c.type === "text");
@@ -119,17 +137,13 @@ describe("incremental migrations", () => {
 						`Migration failed at version ${version}: ${error instanceof Error ? error.message : String(error)}`,
 					);
 				} finally {
-					if (server) {
-						try {
-							await server.client.close();
-						} catch {}
-					}
+					await closeServer(server);
 				}
 			}
 
 			// Verify database was created
 			expect(await testDb.exists()).toBe(true);
-		}, 120000); // 2 minute timeout for sequential migrations
+		}, 180000); // 3 minute timeout for sequential migrations (Windows needs more time)
 
 		it("should migrate from last published version to current development", async () => {
 			// Skip if no published versions
@@ -181,11 +195,7 @@ describe("incremental migrations", () => {
 					`✓ Initialized database with version ${lastPublishedVersion}`,
 				);
 			} finally {
-				if (server) {
-					try {
-						await server.client.close();
-					} catch {}
-				}
+				await closeServer(server);
 			}
 
 			// Step 2: Run current development version against the same database
@@ -235,13 +245,9 @@ describe("incremental migrations", () => {
 					`✓ Development version (${CURRENT_VERSION}) successfully migrated from ${lastPublishedVersion}`,
 				);
 			} finally {
-				if (server) {
-					try {
-						await server.client.close();
-					} catch {}
-				}
+				await closeServer(server);
 			}
-		}, 60000); // 1 minute timeout
+		}, 90000); // 1.5 minute timeout (Windows needs more time)
 	});
 
 	describe("individual version migrations", () => {
@@ -270,13 +276,9 @@ describe("incremental migrations", () => {
 				const result = await server.callTool("search_facts", { limit: 1 });
 				expect(result.isError).toBeFalsy();
 			} finally {
-				if (server) {
-					try {
-						await server.client.close();
-					} catch {}
-				}
+				await closeServer(server);
 			}
-		}, 30000); // 30 second timeout per version
+		}, 60000); // 60 second timeout per version (increased for Windows)
 	});
 
 	describe("version upgrade paths", () => {
@@ -329,11 +331,7 @@ describe("incremental migrations", () => {
 
 				console.log(`✓ Created baseline with ${firstVersion}`);
 			} finally {
-				if (server) {
-					try {
-						await server.client.close();
-					} catch {}
-				}
+				await closeServer(server);
 			}
 
 			// Upgrade through each version
@@ -369,11 +367,7 @@ describe("incremental migrations", () => {
 
 					console.log(`✓ Version ${version} preserved data and added new fact`);
 				} finally {
-					if (server) {
-						try {
-							await server.client.close();
-						} catch {}
-					}
+					await closeServer(server);
 				}
 			}
 
@@ -401,12 +395,8 @@ describe("incremental migrations", () => {
 					`✓ Development version verified ${data.facts.length} facts preserved`,
 				);
 			} finally {
-				if (server) {
-					try {
-						await server.client.close();
-					} catch {}
-				}
+				await closeServer(server);
 			}
-		}, 180000); // 3 minute timeout
+		}, 300000); // 5 minute timeout (increased for Windows)
 	});
 });

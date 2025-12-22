@@ -3,6 +3,51 @@ import { unlink, access, stat } from "node:fs/promises";
 import semver from "semver";
 import packageJson from "../../package.json" with { type: "json" };
 
+export const IS_WINDOWS = process.platform === "win32";
+
+/**
+ * Sleep for a given number of milliseconds
+ */
+export function sleep(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Try to delete a file with retries for Windows file locking issues
+ */
+export async function unlinkWithRetry(
+	filePath: string,
+	maxRetries = 5,
+	delayMs = 200,
+): Promise<boolean> {
+	for (let i = 0; i < maxRetries; i++) {
+		try {
+			await access(filePath);
+			await unlink(filePath);
+			return true;
+		} catch (error: unknown) {
+			const err = error as NodeJS.ErrnoException;
+			if (err.code === "ENOENT") {
+				return true; // File doesn't exist, success
+			}
+			if (
+				err.code === "EBUSY" ||
+				err.code === "EPERM" ||
+				err.code === "EACCES"
+			) {
+				// File is locked, wait and retry
+				if (i < maxRetries - 1) {
+					await sleep(delayMs * (i + 1)); // Exponential backoff
+					continue;
+				}
+			}
+			// Other error or max retries reached
+			return false;
+		}
+	}
+	return false;
+}
+
 export const CURRENT_VERSION = packageJson.version;
 
 /** Minimum version to include in migration tests */
@@ -146,17 +191,28 @@ export class MigrationTestDb {
 	constructor(public readonly path: string) {}
 
 	/**
-	 * Clean up the test database file and associated files
+	 * Clean up the test database file and associated files.
+	 * Uses retry logic on Windows to handle file locking issues.
 	 */
 	async cleanup(): Promise<void> {
 		const files = [this.path, `${this.path}-wal`, `${this.path}-shm`];
 
+		// On Windows, add initial delay to allow process cleanup
+		if (IS_WINDOWS) {
+			await sleep(500);
+		}
+
 		for (const file of files) {
-			try {
-				await access(file);
-				await unlink(file);
-			} catch {
-				// File doesn't exist
+			if (IS_WINDOWS) {
+				// Use retry logic on Windows due to file locking
+				await unlinkWithRetry(file, 10, 300);
+			} else {
+				try {
+					await access(file);
+					await unlink(file);
+				} catch {
+					// File doesn't exist
+				}
 			}
 		}
 	}
