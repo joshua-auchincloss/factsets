@@ -29,6 +29,26 @@ const VERSIONS_FILE = join(import.meta.dir, "..", "versions.json");
 const MAX_RETRIES = 3;
 const DEFAULT_RETRY_DELAY_MS = 5000;
 
+/** Optional GitHub token for authenticated API requests (higher rate limits) */
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+/**
+ * Build headers for GitHub API requests.
+ * Includes authentication if GITHUB_TOKEN is available.
+ */
+function getGitHubHeaders(): Record<string, string> {
+	const headers: Record<string, string> = {
+		Accept: "application/vnd.github.v3+json",
+		"User-Agent": "factsets-pre-test",
+	};
+
+	if (GITHUB_TOKEN) {
+		headers.Authorization = `Bearer ${GITHUB_TOKEN}`;
+	}
+
+	return headers;
+}
+
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -63,10 +83,7 @@ async function fetchWithRetry<T>(url: string): Promise<T> {
 	for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
 		try {
 			const response = await axios.get<T>(url, {
-				headers: {
-					Accept: "application/vnd.github.v3+json",
-					"User-Agent": "factsets-pre-test",
-				},
+				headers: getGitHubHeaders(),
 				timeout: 60000,
 			});
 
@@ -102,6 +119,11 @@ async function fetchWithRetry<T>(url: string): Promise<T> {
 
 async function getPublishedVersions(): Promise<string[]> {
 	console.log("[pre-test] Fetching published versions from GitHub...");
+	if (GITHUB_TOKEN) {
+		console.log("[pre-test] Using authenticated GitHub API requests");
+	} else {
+		console.log("[pre-test] Using unauthenticated GitHub API (set GITHUB_TOKEN for higher rate limits)");
+	}
 
 	const data = await fetchWithRetry<Array<{ name: string }>>(
 		`${GITHUB_API_URL}/tags`,
