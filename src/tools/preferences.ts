@@ -590,4 +590,31 @@ export function registerPreferencesTools(server: McpServer, db: DB) {
 			};
 		},
 	);
+
+	/**
+	 * Register user_preferences prompt - exposes same functionality as get_preference_prompt tool
+	 */
+	server.registerPrompt(
+		"user_preferences",
+		{
+			description:
+				"Get user preferences as a natural language prompt. Returns formatted preferences for communication style, code output, documentation, and interaction settings. Use this at session start or before generating significant output.",
+		},
+		async () => {
+			const prefs = await getCurrentPreferences(db);
+			const prompt = generatePreferencePrompt(prefs);
+
+			return {
+				messages: [
+					{
+						role: "user",
+						content: {
+							type: "text",
+							text: `# User Preferences\n\nFollow these preferences when generating responses:\n\n${prompt}`,
+						},
+					},
+				],
+			};
+		},
+	);
 }

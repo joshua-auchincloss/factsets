@@ -212,7 +212,8 @@ See [Configuration Guide](docs/config.md) for all options.
 
 | Prompt               | Description                                |
 | -------------------- | ------------------------------------------ |
-| `setup`     | Guided setup for new project integration   |
+| `setup`              | Guided setup for new project integration   |
+| `user_preferences`   | Get user preferences for output formatting |
 | `knowledge_context`  | Build context from tags                    |
 | `recall_skill`       | Get skill with references                  |
 | `maintenance_report` | Staleness summary                          |
