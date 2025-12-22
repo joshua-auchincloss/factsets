@@ -32,6 +32,13 @@ const staticItems: StaticItem[] = [
 			"Get the Factsets configuration guide. Explains all available configuration options, their effects on system behavior, and recommended settings for different use cases. Check current config values after calling this.",
 		filePath: "prompts/config.md",
 	},
+	{
+		name: "setup",
+		toolName: "get_setup_guide",
+		description:
+			"Get the Factsets integration setup guide. Use this when integrating Factsets into a new project or repository. Provides comprehensive instructions for analyzing the project, migrating existing skills, configuring AGENTS.md, and establishing baseline knowledge. Designed for thorough one-time setup that saves tokens on all future interactions.",
+		filePath: "prompts/setup.md",
+	},
 ];
 
 const staticPrompt = (server: McpServer, item: StaticItem, content: string) => {
