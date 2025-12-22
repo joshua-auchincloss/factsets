@@ -20,6 +20,7 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { registerStaticPrompts } from "../prompts/static-prompts.js";
 import { projectMeta } from "../meta.js";
 import { applySeed } from "../seed/index.js";
+import serverJson from "../../server.json" with { type: "json" };
 
 type Handler = CommandHandler<
 	"mcp-server",
@@ -76,8 +77,11 @@ export const mcpServerHandler = async (
 	});
 
 	const server = new McpServer({
-		name: "factsets",
-		version: "1.0.0",
+		name: serverJson.name,
+		title: serverJson.title,
+		description: serverJson.description,
+		version: serverJson.version,
+		websiteUrl: serverJson.repository.url,
 	});
 
 	const db = createConnection(config.databaseUrl);

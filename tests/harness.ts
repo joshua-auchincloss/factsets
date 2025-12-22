@@ -1,5 +1,8 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import {
+	StdioClientTransport,
+	StdioServerParameters,
+} from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createConnection, runMigrations } from "../src/db";
 
 type PromiseResult<T> = T extends Promise<infer U> ? U : T;
@@ -13,7 +16,9 @@ export async function createTestDb() {
 	return db;
 }
 
-export async function createTestServer() {
+export async function createTestServer(
+	overrides?: Partial<StdioServerParameters>,
+) {
 	const client = new Client({
 		name: "test-client",
 		version: "1.0.0",
@@ -21,8 +26,8 @@ export async function createTestServer() {
 
 	await client.connect(
 		new StdioClientTransport({
-			command: "bun",
-			args: [
+			command: overrides?.command ?? "bun",
+			args: overrides?.args ?? [
 				"src/main.ts",
 				"mcp-server",
 				"--database-url",
