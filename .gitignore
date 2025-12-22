@@ -3,6 +3,8 @@ node_modules
 
 !.github/prompts/skills
 
+versions.json
+
 # output
 out
 dist

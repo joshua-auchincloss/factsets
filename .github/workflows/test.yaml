@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Pre-hydrate test dependencies
+        run: bun run pre-test
+
       - name: Run tests
         run: |
           bun test --coverage \
