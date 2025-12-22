@@ -33,7 +33,6 @@ bun install --global factsets
 Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, etc.), using `bunx`, `npx` or `pnpm dlx` accordingly:
 
 ```json
-//
 {
   "mcpServers": {
     "factsets": {
