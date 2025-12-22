@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PLACEHOLDER_DESCRIPTION } from "../constants.js";
 
 const relationType = z.enum(["prerequisite", "related", "extends"]);
 
@@ -35,7 +36,13 @@ export const skillCreateInput = z.object({
 		.min(1)
 		.regex(/^[a-z0-9-]+$/, "Name must be lowercase alphanumeric with dashes"),
 	title: z.string().min(1),
-	description: z.string().optional(),
+	description: z
+		.string()
+		.min(1)
+		.default(PLACEHOLDER_DESCRIPTION)
+		.describe(
+			"Description explaining what this skill does. Agents should always provide meaningful descriptions to enable search and avoid duplicates.",
+		),
 	content: z.string().min(1),
 	tags: z.array(z.string().min(1)),
 	references: skillReferences.optional(),
@@ -109,6 +116,28 @@ export const skillRestoreInput = z.object({
 
 export const skillRestoreOutput = z.object({
 	restored: z.number().describe("Number of skills restored"),
+});
+
+export const skillUpdateOutput = z.object({
+	success: z.literal(true),
+	name: z.string(),
+});
+
+export const skillSyncOutput = z.object({
+	name: z.string(),
+	contentHash: z.string(),
+	updated: z.boolean(),
+	metadataSynced: z.boolean(),
+});
+
+export const skillLinkOutput = z.object({
+	success: z.literal(true),
+	skillName: z.string(),
+});
+
+export const skillDeleteOutput = z.object({
+	deleted: z.number().describe("Number of skills deleted"),
+	filesDeleted: z.number().optional(),
 });
 
 export const skillCreateOutput = z.object({
@@ -258,6 +287,10 @@ export type SkillSearchOutput = z.infer<typeof skillSearchOutput>;
 export type SkillGetOutput = z.infer<typeof skillGetOutput>;
 export type SkillsGetOutput = z.infer<typeof skillsGetOutput>;
 export type SkillRestoreOutput = z.infer<typeof skillRestoreOutput>;
+export type SkillUpdateOutput = z.infer<typeof skillUpdateOutput>;
+export type SkillSyncOutput = z.infer<typeof skillSyncOutput>;
+export type SkillLinkOutput = z.infer<typeof skillLinkOutput>;
+export type SkillDeleteOutput = z.infer<typeof skillDeleteOutput>;
 export type SkillDependencyGraphInput = z.infer<
 	typeof skillDependencyGraphInput
 >;

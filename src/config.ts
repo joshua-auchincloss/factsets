@@ -85,19 +85,19 @@ export const connect = (databaseUrl: string) => {
 	return drizzle(databaseUrl);
 };
 
-const mcpServerCommand = command(
-	"mcp-server",
-	object({
-		type: constant("mcp-server"),
-		databaseUrl,
-		client: clientOption,
-		skillsDir: skillsDirOption,
-		dryRun: dryRunFlag,
-		watchSkills: watchSkillsFlag,
-		noWatchSkills: noWatchSkillsFlag,
-		noSeed: noSeedFlag,
-	}),
-);
+// Options parser for mcp-server (reusable with and without command name)
+const mcpServerOptions = object({
+	type: constant("mcp-server"),
+	databaseUrl,
+	client: clientOption,
+	skillsDir: skillsDirOption,
+	dryRun: dryRunFlag,
+	watchSkills: watchSkillsFlag,
+	noWatchSkills: noWatchSkillsFlag,
+	noSeed: noSeedFlag,
+});
+
+const mcpServerCommand = command("mcp-server", mcpServerOptions);
 
 const watchFilesCommand = command(
 	"watch-files",
@@ -123,6 +123,14 @@ const restoreCommand = command(
 		type: constant("restore"),
 		databaseUrl,
 		inputFile: inputFileArg,
+	}),
+);
+
+const workerCommand = command(
+	"worker",
+	object({
+		type: constant("worker"),
+		databaseUrl,
 	}),
 );
 
@@ -155,14 +163,32 @@ export type RestoreConfig = {
 	readonly inputFile: string;
 };
 
-type Command = McpServerConfig | WatchFilesConfig | DumpConfig | RestoreConfig;
+export type WorkerConfig = {
+	readonly type: "worker";
+	readonly databaseUrl: string;
+};
+
+type Command =
+	| McpServerConfig
+	| WatchFilesConfig
+	| DumpConfig
+	| RestoreConfig
+	| WorkerConfig;
 
 export type AppConfig = {
 	readonly command: Command;
 };
 
 const appConfig = object({
-	command: or(mcpServerCommand, watchFilesCommand, dumpCommand, restoreCommand),
+	command: or(
+		mcpServerCommand,
+		watchFilesCommand,
+		dumpCommand,
+		restoreCommand,
+		workerCommand,
+		// Default: mcp-server without explicit command name
+		mcpServerOptions,
+	),
 });
 
 export const config: AppConfig = run(appConfig, {

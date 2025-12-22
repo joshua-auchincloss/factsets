@@ -8,7 +8,7 @@ out
 dist
 *.tgz
 out.md
-
+*copy.db
 docs/notes/
 docs/notes/
 # code coverage

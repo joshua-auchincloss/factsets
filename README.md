@@ -15,6 +15,7 @@ A self-maintaining knowledge base for AI agents, exposed via the
 - **Self-Maintaining** - Staleness detection with refresh instructions
 - **Tag-Based Organization** - Flexible categorization and retrieval
 - **Skill Documents** - Markdown files for procedural knowledge
+- **User Preferences** - Configurable output style and agent behavior
 - **MCP Protocol** - Standard interface for AI tool/prompt definitions
 
 ## Installation
@@ -29,40 +30,50 @@ bun install --global factsets
 
 ### As MCP Server
 
-Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, etc.):
+Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, etc.), using `bunx`, `npx` or `pnpm dlx` accordingly:
 
-```json5
+```json
+//
 {
   "mcpServers": {
     "factsets": {
-      // `bunx`, `npx` or `pnpm dlx`
       "command": "bunx",
-      "args": ["factsets", "mcp-server"]
-    }
-  }
+      "args": ["factsets"],
+    },
+  },
 }
 ```
 
 Or run directly:
 
 ```bash
+# mcp-server is the default command
+bunx factsets
+
+# Explicit command also works
 bunx factsets mcp-server
 ```
 
 ### CLI Commands
 
 ```bash
-# Start MCP server (auto-watches skill files and seeds starter content by default)
+# Start MCP server (default command - auto-watches skill files and seeds starter content)
+bunx factsets [--database-url <path>] [--client <type>]
+
+# Explicit mcp-server command (same as above)
 bunx factsets mcp-server [--database-url <path>] [--client <type>]
 
 # Start without file watching
-bunx factsets mcp-server --no-watch-skills
+bunx factsets --no-watch-skills
 
 # Start without seeding starter content
-bunx factsets mcp-server --no-seed
+bunx factsets --no-seed
 
 # Run file watcher standalone
 bunx factsets watch-files [--database-url <path>]
+
+# Run background maintenance worker
+bunx factsets worker [--database-url <path>]
 
 # Export database to JSON
 bunx factsets dump backup.json
@@ -87,44 +98,111 @@ See [Configuration Guide](docs/config.md) for all options.
 
 ## MCP Tools
 
+### Facts
+
+| Tool                   | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `submit_facts`         | Add facts with tags and source tracking  |
+| `search_facts`         | Query facts by tags, content, or filters |
+| `verify_facts`         | Mark facts as verified by ID             |
+| `verify_facts_by_tags` | Bulk verify facts by tags                |
+| `update_fact`          | Update fact content, metadata, or tags   |
+| `delete_facts`         | Remove facts by criteria                 |
+| `restore_facts`        | Restore soft-deleted facts               |
+
+### Resources
+
 | Tool                        | Description                               |
 | --------------------------- | ----------------------------------------- |
-| `submit_facts`              | Add facts with tags and source tracking   |
-| `search_facts`              | Query facts by tags, content, or filters  |
-| `verify_facts`              | Mark facts as verified by ID              |
-| `verify_facts_by_tags`      | Bulk verify facts by tags                 |
-| `update_fact`               | Update fact content, metadata, or tags    |
-| `delete_facts`              | Remove facts by criteria                  |
 | `add_resources`             | Register resources with retrieval methods |
 | `search_resources`          | Find resources by tags, type, or URI      |
-| `get_resource`              | Get resource with freshness status        |
-| `update_resource_snapshot`  | Update cached content                     |
-| `update_resource_snapshots` | Bulk update snapshots                     |
+| `get_resources`             | Get resources by ID or URI with freshness |
+| `update_resource_snapshot`  | Update cached content for single resource |
+| `update_resource_snapshots` | Bulk update cached content                |
+| `update_resource`           | Update resource metadata (not content)    |
 | `delete_resources`          | Remove resources                          |
-| `create_skill`              | Create markdown skill document            |
-| `update_skill`              | Update skill metadata/references          |
-| `search_skills`             | Find skills by tags or query              |
-| `get_skill`                 | Get skill with content                    |
-| `link_skill`                | Link skill to facts/resources/skills      |
-| `sync_skill`                | Sync skill after file edit                |
-| `delete_skills`             | Remove skills                             |
-| `submit_execution_logs`     | Record command/test/build executions      |
-| `search_execution_logs`     | Find executions by query, tags, success   |
-| `get_execution_log`         | Get execution details by ID               |
-| `check_stale`               | Find stale resources and dependencies     |
-| `mark_resources_refreshed`  | Mark resources as current                 |
-| `create_tags`               | Create organizational tags                |
-| `list_tags`                 | List tags with usage counts               |
-| `get_config` / `set_config` | Manage configuration                      |
+| `restore_resources`         | Restore soft-deleted resources            |
+
+### Skills
+
+| Tool                   | Description                          |
+| ---------------------- | ------------------------------------ |
+| `create_skill`         | Create markdown skill document       |
+| `update_skill`         | Update skill metadata/references     |
+| `search_skills`        | Find skills by tags or query         |
+| `get_skills`           | Get skills by name with content      |
+| `link_skill`           | Link skill to facts/resources/skills |
+| `sync_skill`           | Sync skill after file edit           |
+| `delete_skills`        | Remove skills                        |
+| `get_dependency_graph` | Get skill dependency tree            |
+| `restore_skills`       | Restore soft-deleted skills          |
+
+### Execution Logs
+
+| Tool                    | Description                             |
+| ----------------------- | --------------------------------------- |
+| `submit_execution_logs` | Record command/test/build executions    |
+| `search_execution_logs` | Find executions by query, tags, success |
+| `get_execution_log`     | Get execution details by ID             |
+
+### Tags
+
+| Tool                | Description                 |
+| ------------------- | --------------------------- |
+| `create_tags`       | Create organizational tags  |
+| `list_tags`         | List tags with usage counts |
+| `update_tags`       | Update tag descriptions     |
+| `prune_orphan_tags` | Clean up unused orphan tags |
+
+### Configuration
+
+| Tool                | Description                             |
+| ------------------- | --------------------------------------- |
+| `get_config`        | Get a configuration value by key        |
+| `set_config`        | Set a configuration value               |
+| `delete_config`     | Delete a configuration value            |
+| `list_config`       | List all configuration with schema      |
+| `get_config_schema` | Get available options with descriptions |
+
+### User Preferences
+
+| Tool                    | Description                            |
+| ----------------------- | -------------------------------------- |
+| `get_preference_prompt` | Get natural language preference prompt |
+| `get_user_preferences`  | Get structured preference data         |
+| `infer_preference`      | Update preference from user behavior   |
+| `reset_preferences`     | Reset preferences to defaults          |
+
+### Maintenance
+
+| Tool                       | Description                           |
+| -------------------------- | ------------------------------------- |
+| `check_stale`              | Find stale resources and dependencies |
+| `mark_resources_refreshed` | Mark resources as current             |
+
+### Context & Guides
+
+| Tool                     | Description                                      |
+| ------------------------ | ------------------------------------------------ |
+| `get_knowledge_context`  | Build context from tags (facts/resources/skills) |
+| `build_skill_context`    | Get skill with formatted content and refs        |
+| `get_maintenance_report` | Generate staleness/maintenance report            |
+| `get_refresh_guide`      | Get instructions for refreshing a resource       |
+| `get_agent_guide`        | Get the agent workflow guide (call first)        |
+| `get_concept_guide`      | Get conceptual overview and design philosophy    |
+| `get_config_guide`       | Get configuration guide with all options         |
 
 ## MCP Prompts
 
-| Prompt               | Description                        |
-| -------------------- | ---------------------------------- |
-| `knowledge_context`  | Build context from tags            |
-| `recall_skill`       | Get skill with references          |
-| `maintenance_report` | Staleness summary                  |
-| `refresh_guide`      | Instructions to refresh a resource |
+| Prompt               | Description                          |
+| -------------------- | ------------------------------------ |
+| `knowledge_context`  | Build context from tags              |
+| `recall_skill`       | Get skill with references            |
+| `maintenance_report` | Staleness summary                    |
+| `refresh_guide`      | Instructions to refresh a resource   |
+| `agent_guide`        | Agent workflow guide (call first)    |
+| `concept`            | Conceptual overview and philosophy   |
+| `config`             | Configuration guide with all options |
 
 ## Documentation
 

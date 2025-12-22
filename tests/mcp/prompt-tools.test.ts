@@ -378,13 +378,13 @@ describe("prompt tools", () => {
 			// Should contain key sections from facts-agent-flow.md
 			expect(text).toContain("Factsets Agent Workflow");
 			expect(text).toContain("Workflow Phases");
-			expect(text).toContain("Discovery");
-			expect(text).toContain("Contribution");
-			expect(text).toContain("Maintenance");
+			expect(text).toContain("Validate");
+			expect(text).toContain("Contribute");
+			expect(text).toContain("Maintain");
 		});
 
-		it("get_factsets_concept returns the conceptual overview", async () => {
-			const result = await server.callTool("get_factsets_concept", {});
+		it("get_concept_guide returns the conceptual overview", async () => {
+			const result = await server.callTool("get_concept_guide", {});
 
 			expect(result.isError).toBeFalsy();
 			const text = extractText(result);
@@ -413,8 +413,8 @@ describe("prompt tools", () => {
 			expect(toolText).toBe(promptText);
 		});
 
-		it("get_factsets_concept matches concept prompt content", async () => {
-			const toolResult = await server.callTool("get_factsets_concept", {});
+		it("get_concept_guide matches concept prompt content", async () => {
+			const toolResult = await server.callTool("get_concept_guide", {});
 			const toolText = extractText(toolResult);
 
 			const promptResult = await server.getPrompt("concept", {});

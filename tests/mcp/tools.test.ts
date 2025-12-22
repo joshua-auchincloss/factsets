@@ -355,6 +355,8 @@ describe("mcp tools", () => {
 				},
 			});
 
+			console.log(updateResult);
+
 			expect(updateResult.isError).toBeFalsy();
 			const updateData = parseResult<{ success: boolean }>(updateResult);
 			expect(updateData.success).toBe(true);

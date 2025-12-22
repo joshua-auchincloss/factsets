@@ -1,5 +1,6 @@
 import type { CommandHandler } from "./types.js";
 import { createConnection, runMigrations } from "../db/index.js";
+import { PLACEHOLDER_DESCRIPTION } from "../constants.js";
 import {
 	tags,
 	facts,
@@ -44,6 +45,7 @@ interface DumpOutput {
 		id: number;
 		uri: string;
 		type: string;
+		description?: string | null;
 		snapshot: string | null;
 		retrievalMethod: unknown | null;
 		tags: string[];
@@ -181,6 +183,7 @@ export const dumpHandler: DumpHandler = async (cfg) => {
 			id: r.id,
 			uri: r.uri,
 			type: r.type,
+			description: r.description,
 			snapshot: r.snapshot,
 			retrievalMethod: r.retrievalMethod,
 			tags: resourceTagsMap.get(r.id) ?? [],
@@ -314,6 +317,7 @@ export const restoreHandler: RestoreHandler = async (cfg) => {
 				.values({
 					uri: resource.uri,
 					type: resource.type,
+					description: resource.description ?? PLACEHOLDER_DESCRIPTION,
 					snapshot: resource.snapshot,
 					snapshotHash: resource.snapshot
 						? computeHash(resource.snapshot)
@@ -362,7 +366,7 @@ export const restoreHandler: RestoreHandler = async (cfg) => {
 				.values({
 					name: skill.name,
 					title: skill.title,
-					description: skill.description,
+					description: skill.description ?? PLACEHOLDER_DESCRIPTION,
 					filePath,
 					contentHash: skill.content ? computeHash(skill.content) : null,
 				})

@@ -1,7 +1,6 @@
 # Factsets MCP Server Reference
 
-A self-maintaining knowledge base exposed via the Model Context Protocol (MCP). Stores facts, resources, and skills in
-SQLite for agent context persistence.
+A self-maintaining knowledge base exposed via the Model Context Protocol (MCP). Stores facts, resources, and skills in SQLite for agent context persistence.
 
 ## Quick Start
 
@@ -22,7 +21,7 @@ Add to your MCP client configuration:
   "mcpServers": {
     "factsets": {
       "command": "bunx",
-      "args": ["factsets", "mcp-server"]
+      "args": ["factsets"]
     }
   }
 }
@@ -30,73 +29,182 @@ Add to your MCP client configuration:
 
 ## Configuration
 
-### `set_config`
+### set_config
 
 Set a configuration value.
 
-**Parameters:**
-
 | Name    | Type   | Required | Description         |
 | ------- | ------ | -------- | ------------------- |
-| `key`   | string | ✓        | Configuration key   |
-| `value` | string | ✓        | Configuration value |
+| `key`   | string | yes      | Configuration key   |
+| `value` | string | yes      | Configuration value |
 
-**Common Keys:**
+Common keys:
 
 | Key          | Values                                                   | Description                               |
 | ------------ | -------------------------------------------------------- | ----------------------------------------- |
 | `client`     | `github-copilot`, `cursor`, `windsurf`, `claude-desktop` | Client type (determines skills directory) |
 | `skills_dir` | path                                                     | Override default skills directory         |
 
-**Example:**
+Example:
 
 ```json
 { "key": "client", "value": "github-copilot" }
 ```
 
-### `get_config`
+### get_config
 
 Get a configuration value.
 
-**Parameters:**
-
 | Name  | Type   | Required | Description       |
 | ----- | ------ | -------- | ----------------- |
-| `key` | string | ✓        | Configuration key |
+| `key` | string | yes      | Configuration key |
 
-### `delete_config`
+### get_config_schema
+
+Get the full configuration schema showing all available options with their types, defaults, and descriptions.
+
+No parameters.
+
+Returns schema with all configurable keys including:
+
+- Freshness thresholds per resource category
+- Search limits for all entity types
+- Context budgets for knowledge context
+- Tag relationship settings
+- Snapshot management options
+- Maintenance and worker intervals
+
+### delete_config
 
 Delete a configuration value.
 
-**Parameters:**
-
 | Name  | Type   | Required | Description       |
 | ----- | ------ | -------- | ----------------- |
-| `key` | string | ✓        | Configuration key |
+| `key` | string | yes      | Configuration key |
 
-### `list_config`
+### list_config
 
 List all configuration values.
 
-**Parameters:** None
+No parameters.
+
+### Configuration Categories
+
+#### Freshness Thresholds
+
+Control how long before resources are considered stale:
+
+| Key                         | Default | Description                             |
+| --------------------------- | ------- | --------------------------------------- |
+| `freshness_source_code`     | 12      | Source code files (.ts, .js, .py, etc.) |
+| `freshness_lock_files`      | 168     | Lock files (package-lock.json, etc.)    |
+| `freshness_config_files`    | 24      | Config files (tsconfig.json, etc.)      |
+| `freshness_documentation`   | 72      | Documentation (.md, /docs/)             |
+| `freshness_generated_files` | 1       | Generated files (/dist/, .min.js)       |
+| `freshness_api_schemas`     | 24      | API schemas (.graphql, .proto)          |
+| `freshness_database`        | 72      | Database files (.sql, /migrations/)     |
+| `freshness_scripts`         | 72      | Scripts (.sh, Makefiles)                |
+| `freshness_tests`           | 24      | Test files (.test.ts, /**tests**/)      |
+| `freshness_assets`          | 168     | Assets (images, fonts, media)           |
+| `freshness_infrastructure`  | 24      | Infrastructure (Terraform, Docker, K8s) |
+| `freshness_default`         | 168     | Default for unmatched files             |
+
+#### Search Limits
+
+Control maximum results for search operations:
+
+| Key                           | Default | Description                     |
+| ----------------------------- | ------- | ------------------------------- |
+| `search_limit_tags`           | 100     | Maximum tags returned           |
+| `search_limit_facts`          | 50      | Maximum facts returned          |
+| `search_limit_resources`      | 100     | Maximum resources returned      |
+| `search_limit_skills`         | 30      | Maximum skills returned         |
+| `search_limit_execution_logs` | 50      | Maximum execution logs returned |
+| `search_include_deleted`      | false   | Include soft-deleted items      |
+
+#### Context Budgets
+
+Control `get_knowledge_context` output size:
+
+| Key                        | Default | Description                        |
+| -------------------------- | ------- | ---------------------------------- |
+| `context_budget_facts`     | 50      | Max facts in knowledge context     |
+| `context_budget_resources` | 20      | Max resources in knowledge context |
+| `context_budget_skills`    | 10      | Max skills in knowledge context    |
+
+#### Tag Relationships
+
+Configure tag expansion for searches:
+
+| Key               | Type | Default | Description                                               |
+| ----------------- | ---- | ------- | --------------------------------------------------------- |
+| `tag_synonyms`    | JSON | `{}`    | Equivalent tags (e.g., `{"js": "javascript"}`)            |
+| `tag_hierarchies` | JSON | `{}`    | Parent-child tags (e.g., `{"backend": ["python", "go"]}`) |
+| `required_tags`   | JSON | `{}`    | Required tags per entity type                             |
+
+#### Snapshot Management
+
+Control resource snapshot storage:
+
+| Key                           | Default    | Description                                     |
+| ----------------------------- | ---------- | ----------------------------------------------- |
+| `snapshot_max_size_kb`        | 100        | Max snapshot size in KB                         |
+| `snapshot_overflow_behavior`  | `truncate` | `truncate`, `summarize`, `remove_noise`, `auto` |
+| `snapshot_retention_versions` | 3          | Number of snapshot versions to retain           |
+
+#### Maintenance Settings
+
+| Key                           | Default | Description                           |
+| ----------------------------- | ------- | ------------------------------------- |
+| `auto_prune_orphan_tags`      | false   | Auto-prune unused tags                |
+| `soft_delete_retention_days`  | 7       | Days before hard delete               |
+| `staleness_warning_threshold` | 0.8     | Fraction of max age for early warning |
+
+#### Background Worker Intervals
+
+All values in milliseconds:
+
+| Key                               | Default  | Description                     |
+| --------------------------------- | -------- | ------------------------------- |
+| `worker_interval_auto_verify`     | 3600000  | Auto-verify old facts (1h)      |
+| `worker_interval_expire_facts`    | 7200000  | Expire unverified facts (2h)    |
+| `worker_interval_prune_snapshots` | 86400000 | Prune old snapshots (24h)       |
+| `worker_interval_prune_tags`      | 86400000 | Prune orphan tags (24h)         |
+| `worker_interval_hard_delete`     | 86400000 | Hard-delete expired items (24h) |
+
+#### User Preferences
+
+Control agent output style and behavior. All keys prefixed with `pref_`:
+
+| Key                         | Default       | Values                                                        | Description                |
+| --------------------------- | ------------- | ------------------------------------------------------------- | -------------------------- |
+| `pref_tone`                 | `neutral`     | `formal`, `neutral`, `casual`, `technical`                    | Communication tone         |
+| `pref_verbosity`            | `concise`     | `minimal`, `concise`, `balanced`, `detailed`, `comprehensive` | Response verbosity         |
+| `pref_emoji_usage`          | `banned`      | `banned`, `minimal`, `moderate`, `liberal`                    | Emoji policy               |
+| `pref_special_chars`        | `banned`      | `banned`, `minimal`, `allowed`                                | Decorative unicode         |
+| `pref_section_dividers`     | `banned`      | `banned`, `minimal`, `allowed`                                | Section dividers/rules     |
+| `pref_code_comments`        | `minimal`     | `banned`, `minimal`, `moderate`, `verbose`                    | Inline code comments       |
+| `pref_code_inline_comments` | `critical`    | `banned`, `critical`, `logical_branches`, `verbose`           | Function body comments     |
+| `pref_code_banners`         | `banned`      | `banned`, `minimal`, `allowed`                                | Decorative banner comments |
+| `pref_code_docstrings`      | `public_only` | `omit`, `public_only`, `all`                                  | Docstring generation       |
+
+See [Configuration Guide](config.md) or call `get_config_guide` for full list of 30+ preference keys.
 
 ## Tags
 
 Tags organize facts, resources, and skills. Create tags first, then use them when submitting content.
 
-### `create_tags`
+### create_tags
 
 Create one or more tags.
 
-**Parameters:**
-
 | Name                 | Type   | Required | Description          |
 | -------------------- | ------ | -------- | -------------------- |
-| `tags`               | array  | ✓        | Array of tag objects |
-| `tags[].name`        | string | ✓        | Tag name             |
-| `tags[].description` | string |          | Optional description |
+| `tags`               | array  | yes      | Array of tag objects |
+| `tags[].name`        | string | yes      | Tag name             |
+| `tags[].description` | string | no       | Optional description |
 
-**Example:**
+Example:
 
 ```json
 {
@@ -107,38 +215,73 @@ Create one or more tags.
 }
 ```
 
-### `list_tags`
+### list_tags
 
 List tags with optional filtering.
 
-**Parameters:**
-
 | Name      | Type    | Required | Default | Description                           |
 | --------- | ------- | -------- | ------- | ------------------------------------- |
-| `filter`  | string  |          |         | Filter by name pattern                |
-| `limit`   | integer |          | 100     | Maximum results                       |
-| `orderBy` | enum    |          | "usage" | Sort order: "usage", "name", "recent" |
+| `filter`  | string  | no       | -       | Filter by name pattern                |
+| `limit`   | integer | no       | 100     | Maximum results                       |
+| `orderBy` | enum    | no       | "usage" | Sort order: "usage", "name", "recent" |
+
+### prune_orphan_tags
+
+Clean up orphan tags that have zero usage across all entity types (facts, resources, skills, execution logs).
+
+| Name     | Type    | Required | Default | Description                                          |
+| -------- | ------- | -------- | ------- | ---------------------------------------------------- |
+| `dryRun` | boolean | no       | false   | If true, return list of orphan tags without deleting |
+
+Example (dry run):
+
+```json
+{ "dryRun": true }
+```
+
+Returns:
+
+```json
+{
+  "pruned": 3,
+  "orphanTags": [
+    { "id": 1, "name": "unused-tag" },
+    { "id": 5, "name": "stale-tag" },
+    { "id": 8, "name": "old-tag" }
+  ]
+}
+```
+
+Example (actual deletion):
+
+```json
+{}
+```
+
+Returns:
+
+```json
+{ "pruned": 3 }
+```
 
 ## Facts
 
-Atomic knowledge units (1-3 sentences). Facts are upserted—matching content updates instead of duplicating.
+Atomic knowledge units (1-3 sentences). Facts are upserted - matching content updates instead of duplicating.
 
-### `submit_facts`
+### submit_facts
 
 Submit one or more facts.
 
-**Parameters:**
-
 | Name                 | Type     | Required | Description                                  |
 | -------------------- | -------- | -------- | -------------------------------------------- |
-| `facts`              | array    | ✓        | Array of fact objects                        |
-| `facts[].content`    | string   | ✓        | The fact itself                              |
-| `facts[].tags`       | string[] | ✓        | Tags for categorization                      |
-| `facts[].source`     | string   |          | Where the fact came from                     |
-| `facts[].sourceType` | enum     |          | `user`, `documentation`, `code`, `inference` |
-| `facts[].verified`   | boolean  |          | Default: `false`                             |
+| `facts`              | array    | yes      | Array of fact objects                        |
+| `facts[].content`    | string   | yes      | The fact itself                              |
+| `facts[].tags`       | string[] | yes      | Tags for categorization                      |
+| `facts[].source`     | string   | no       | Where the fact came from                     |
+| `facts[].sourceType` | enum     | no       | `user`, `documentation`, `code`, `inference` |
+| `facts[].verified`   | boolean  | no       | Default: `false`                             |
 
-**Example:**
+Example:
 
 ```json
 {
@@ -153,66 +296,58 @@ Submit one or more facts.
 }
 ```
 
-### `search_facts`
+### search_facts
 
 Search facts by tags, query, or filters.
 
-**Parameters:**
-
 | Name           | Type     | Required | Default  | Description                             |
 | -------------- | -------- | -------- | -------- | --------------------------------------- |
-| `tags`         | string[] |          |          | Filter by tags                          |
-| `query`        | string   |          |          | Text search in content                  |
-| `limit`        | integer  |          | 50       | Maximum results                         |
-| `orderBy`      | enum     |          | "recent" | Sort order: "recent", "oldest", "usage" |
-| `verifiedOnly` | boolean  |          |          | Only verified facts                     |
-| `sourceType`   | enum     |          |          | Filter by source type                   |
+| `tags`         | string[] | no       | -        | Filter by tags                          |
+| `query`        | string   | no       | -        | Text search in content                  |
+| `limit`        | integer  | no       | 50       | Maximum results                         |
+| `orderBy`      | enum     | no       | "recent" | Sort order: "recent", "oldest", "usage" |
+| `verifiedOnly` | boolean  | no       | -        | Only verified facts                     |
+| `sourceType`   | enum     | no       | -        | Filter by source type                   |
 
-### `verify_facts`
+### verify_facts
 
 Mark facts as verified.
 
-**Parameters:**
-
 | Name  | Type      | Required | Description        |
 | ----- | --------- | -------- | ------------------ |
-| `ids` | integer[] | ✓        | Fact IDs to verify |
+| `ids` | integer[] | yes      | Fact IDs to verify |
 
-### `delete_facts`
+### delete_facts
 
 Delete facts by various criteria.
 
-**Parameters:**
-
 | Name             | Type      | Required | Description                  |
 | ---------------- | --------- | -------- | ---------------------------- |
-| `ids`            | integer[] |          | Specific fact IDs            |
-| `tags`           | string[]  |          | Delete facts with these tags |
-| `olderThan`      | datetime  |          | Delete facts older than this |
-| `unverifiedOnly` | boolean   |          | Only delete unverified facts |
+| `ids`            | integer[] | no       | Specific fact IDs            |
+| `tags`           | string[]  | no       | Delete facts with these tags |
+| `olderThan`      | datetime  | no       | Delete facts older than this |
+| `unverifiedOnly` | boolean   | no       | Only delete unverified facts |
 
-### `update_fact`
+### update_fact
 
 Update an existing fact's content, metadata, or tags.
 
-**Parameters:**
-
-| Name                  | Type     | Required | Description                                |
-| --------------------- | -------- | -------- | ------------------------------------------ |
-| `id`                  | integer  | \*       | Fact ID to update                          |
-| `contentMatch`        | string   | \*       | Match fact by exact content instead of ID  |
-| `updates`             | object   | ✓        | Fields to update                           |
-| `updates.content`     | string   |          | New content                                |
-| `updates.source`      | string   |          | New source                                 |
-| `updates.sourceType`  | enum     |          | New source type                            |
-| `updates.verified`    | boolean  |          | Set verification status                    |
-| `updates.tags`        | string[] |          | Replace all tags                           |
-| `updates.appendTags`  | string[] |          | Add tags without removing existing         |
-| `updates.removeTags`  | string[] |          | Remove specific tags                       |
+| Name                 | Type     | Required | Description                               |
+| -------------------- | -------- | -------- | ----------------------------------------- |
+| `id`                 | integer  | \*       | Fact ID to update                         |
+| `contentMatch`       | string   | \*       | Match fact by exact content instead of ID |
+| `updates`            | object   | yes      | Fields to update                          |
+| `updates.content`    | string   | no       | New content                               |
+| `updates.source`     | string   | no       | New source                                |
+| `updates.sourceType` | enum     | no       | New source type                           |
+| `updates.verified`   | boolean  | no       | Set verification status                   |
+| `updates.tags`       | string[] | no       | Replace all tags                          |
+| `updates.appendTags` | string[] | no       | Add tags without removing existing        |
+| `updates.removeTags` | string[] | no       | Remove specific tags                      |
 
 \*One of `id` or `contentMatch` is required.
 
-**Example:**
+Example:
 
 ```json
 {
@@ -225,28 +360,22 @@ Update an existing fact's content, metadata, or tags.
 }
 ```
 
-### `verify_facts_by_tags`
+### verify_facts_by_tags
 
 Bulk verify all facts matching specified tags.
 
-**Parameters:**
-
 | Name         | Type     | Required | Default | Description                                        |
 | ------------ | -------- | -------- | ------- | -------------------------------------------------- |
-| `tags`       | string[] | ✓        |         | Tags to match                                      |
-| `requireAll` | boolean  |          | false   | If true, only verify facts with ALL specified tags |
+| `tags`       | string[] | yes      | -       | Tags to match                                      |
+| `requireAll` | boolean  | no       | false   | If true, only verify facts with all specified tags |
 
-**Example:**
+Example:
 
 ```json
-// Verify all facts with "api" OR "auth" tags
 { "tags": ["api", "auth"] }
-
-// Verify only facts with BOTH "api" AND "auth" tags
-{ "tags": ["api", "auth"], "requireAll": true }
 ```
 
-**Returns:**
+Returns:
 
 ```json
 {
@@ -255,27 +384,38 @@ Bulk verify all facts matching specified tags.
 }
 ```
 
+### restore_facts
+
+Restore soft-deleted facts.
+
+| Name  | Type      | Required | Description                          |
+| ----- | --------- | -------- | ------------------------------------ |
+| `ids` | integer[] | yes      | IDs of soft-deleted facts to restore |
+
+Returns:
+
+```json
+{ "restored": 3 }
+```
+
 ## Resources
 
-External content references with cached snapshots. The system stores retrieval methods—actual fetching is performed by
-the agent.
+External content references with cached snapshots. The system stores retrieval methods - actual fetching is performed by the agent.
 
-### `add_resources`
+### add_resources
 
 Register resources with retrieval methods.
 
-**Parameters:**
-
 | Name                          | Type     | Required | Description                     |
 | ----------------------------- | -------- | -------- | ------------------------------- |
-| `resources`                   | array    | ✓        | Array of resource objects       |
-| `resources[].uri`             | string   | ✓        | Location (path, URL, etc.)      |
-| `resources[].type`            | enum     | ✓        | `file`, `url`, `api`, `command` |
-| `resources[].tags`            | string[] | ✓        | Tags for categorization         |
-| `resources[].snapshot`        | string   |          | Initial cached content          |
-| `resources[].retrievalMethod` | object   |          | How to refresh                  |
+| `resources`                   | array    | yes      | Array of resource objects       |
+| `resources[].uri`             | string   | yes      | Location (path, URL, etc.)      |
+| `resources[].type`            | enum     | yes      | `file`, `url`, `api`, `command` |
+| `resources[].tags`            | string[] | yes      | Tags for categorization         |
+| `resources[].snapshot`        | string   | no       | Initial cached content          |
+| `resources[].retrievalMethod` | object   | no       | How to refresh                  |
 
-**Retrieval Method:**
+Retrieval method:
 
 | Name      | Type   | Description                            |
 | --------- | ------ | -------------------------------------- |
@@ -284,7 +424,7 @@ Register resources with retrieval methods.
 | `url`     | string | URL to fetch (for url/api types)       |
 | `headers` | object | HTTP headers                           |
 
-**Example:**
+Example:
 
 ```json
 {
@@ -311,35 +451,31 @@ Register resources with retrieval methods.
 }
 ```
 
-### `search_resources`
+### search_resources
 
 Search resources by tags, type, or URI pattern.
 
-**Parameters:**
-
 | Name         | Type     | Required | Default  | Description                             |
 | ------------ | -------- | -------- | -------- | --------------------------------------- |
-| `tags`       | string[] |          |          | Filter by tags                          |
-| `type`       | enum     |          |          | `file`, `url`, `api`, `command`         |
-| `uriPattern` | string   |          |          | URI pattern to match                    |
-| `limit`      | integer  |          | 100      | Maximum results                         |
-| `orderBy`    | enum     |          | "recent" | Sort order: "recent", "oldest", "fresh" |
+| `tags`       | string[] | no       | -        | Filter by tags                          |
+| `type`       | enum     | no       | -        | `file`, `url`, `api`, `command`         |
+| `uriPattern` | string   | no       | -        | URI pattern to match                    |
+| `limit`      | integer  | no       | 100      | Maximum results                         |
+| `orderBy`    | enum     | no       | "recent" | Sort order: "recent", "oldest", "fresh" |
 
-### `get_resource`
+### get_resources
 
-Get a specific resource with its snapshot.
+Get one or more resources with their snapshots.
 
-**Parameters:**
+| Name          | Type      | Required | Default | Description                              |
+| ------------- | --------- | -------- | ------- | ---------------------------------------- |
+| `ids`         | integer[] | \*       | -       | Resource IDs                             |
+| `uris`        | string[]  | \*       | -       | Resource URIs                            |
+| `maxAgeHours` | integer   | no       | 1       | Hours before content is considered stale |
 
-| Name          | Type    | Required | Default | Description                                      |
-| ------------- | ------- | -------- | ------- | ------------------------------------------------ |
-| `id`          | integer | \*       |         | Resource ID                                      |
-| `uri`         | string  | \*       |         | Resource URI                                     |
-| `maxAgeHours` | integer |          | 1       | Hours before content is considered stale         |
+\*Either `ids` or `uris` is required.
 
-\*One of `id` or `uri` is required.
-
-**Returns:**
+Returns array of resources with:
 
 - `uri`: Resource location
 - `type`: Resource type
@@ -347,34 +483,32 @@ Get a specific resource with its snapshot.
 - `isFresh`: Whether snapshot is within freshnessThresholdHours
 - `snapshotAgeSeconds`: Age of snapshot
 - `retrievalMethod`: How to refresh
+- `categories`: Inferred freshness categories
+- `freshnessThresholdHours`: Applied threshold
 
-### `update_resource_snapshot`
+### update_resource_snapshot
 
 Update cached content after fetching fresh data.
-
-**Parameters:**
 
 | Name       | Type    | Required | Description        |
 | ---------- | ------- | -------- | ------------------ |
 | `id`       | integer | \*       | Resource ID        |
 | `uri`      | string  | \*       | Resource URI       |
-| `snapshot` | string  | ✓        | New cached content |
+| `snapshot` | string  | yes      | New cached content |
 
 \*One of `id` or `uri` is required.
 
-### `update_resource_snapshots`
+### update_resource_snapshots
 
 Bulk update cached content for multiple resources.
 
-**Parameters:**
-
 | Name                     | Type    | Required | Description               |
 | ------------------------ | ------- | -------- | ------------------------- |
-| `snapshots`              | array   | ✓        | Array of snapshot updates |
-| `snapshots[].resourceId` | integer | ✓        | Resource ID               |
-| `snapshots[].snapshot`   | string  | ✓        | New cached content        |
+| `snapshots`              | array   | yes      | Array of snapshot updates |
+| `snapshots[].resourceId` | integer | yes      | Resource ID               |
+| `snapshots[].snapshot`   | string  | yes      | New cached content        |
 
-**Example:**
+Example:
 
 ```json
 {
@@ -385,20 +519,42 @@ Bulk update cached content for multiple resources.
 }
 ```
 
-### `delete_resources`
+### update_resource
 
-Delete resources by ID or URI.
+Update resource metadata (description, tags, retrieval method) without modifying snapshot content or lastVerifiedAt timestamp. Use this to fix placeholder descriptions or reorganize tags.
 
-**Parameters:**
+| Name              | Type     | Required    | Description                                |
+| ----------------- | -------- | ----------- | ------------------------------------------ |
+| `id`              | integer  | conditional | Resource ID (required if uri not provided) |
+| `uri`             | string   | conditional | Resource URI (required if id not provided) |
+| `description`     | string   | no          | New description for the resource           |
+| `tags`            | string[] | no          | Replace all tags with this list            |
+| `appendTags`      | string[] | no          | Add tags without removing existing ones    |
+| `retrievalMethod` | object   | no          | Update the retrieval method                |
 
-| Name   | Type      | Required | Description             |
-| ------ | --------- | -------- | ----------------------- |
-| `ids`  | integer[] | \*       | Resource IDs to delete  |
-| `uris` | string[]  | \*       | Resource URIs to delete |
+At least one of `description`, `tags`, `appendTags`, or `retrievalMethod` must be provided.
 
-\*One of `ids` or `uris` is required.
+Example:
 
-**Returns:**
+```json
+{
+  "id": 42,
+  "description": "TypeScript compiler configuration with strict mode and ES2022 target",
+  "appendTags": ["reviewed"]
+}
+```
+
+### delete_resources
+
+Delete resources by ID or URI. Either `ids` or `uris` must be provided (or both).
+
+| Name   | Type      | Required    | Description                                                 |
+| ------ | --------- | ----------- | ----------------------------------------------------------- |
+| `ids`  | integer[] | conditional | Resource IDs to delete (required if `uris` not provided)    |
+| `uris` | string[]  | conditional | Resource URIs to delete (required if `ids` not provided)    |
+| `soft` | boolean   | no          | If true, soft delete (set deletedAt) instead of hard delete |
+
+Returns:
 
 ```json
 {
@@ -406,30 +562,42 @@ Delete resources by ID or URI.
 }
 ```
 
+### restore_resources
+
+Restore soft-deleted resources.
+
+| Name  | Type      | Required | Description                              |
+| ----- | --------- | -------- | ---------------------------------------- |
+| `ids` | integer[] | yes      | IDs of soft-deleted resources to restore |
+
+Returns:
+
+```json
+{ "restored": 2 }
+```
+
 ## Skills
 
 Markdown documents capturing procedural knowledge. Skills can reference other skills, resources, and facts.
 
-### `create_skill`
+### create_skill
 
 Create a skill document.
 
-**Parameters:**
+| Name                   | Type      | Required | Description                                             |
+| ---------------------- | --------- | -------- | ------------------------------------------------------- |
+| `name`                 | string    | yes      | Unique identifier (lowercase, alphanumeric with dashes) |
+| `title`                | string    | yes      | Human-readable title                                    |
+| `description`          | string    | no       | Brief description                                       |
+| `content`              | string    | yes      | Markdown content                                        |
+| `tags`                 | string[]  | yes      | Tags for categorization                                 |
+| `references`           | object    | no       | Initial references                                      |
+| `references.skills`    | string[]  | no       | Names of related skills                                 |
+| `references.resources` | integer[] | no       | Resource IDs                                            |
+| `references.facts`     | integer[] | no       | Fact IDs                                                |
+| `executionLogId`       | integer   | no       | ID of execution log that validated this skill           |
 
-| Name                   | Type      | Required | Description                                              |
-| ---------------------- | --------- | -------- | -------------------------------------------------------- |
-| `name`                 | string    | ✓        | Unique identifier (lowercase, alphanumeric with dashes)  |
-| `title`                | string    | ✓        | Human-readable title                                     |
-| `description`          | string    |          | Brief description                                        |
-| `content`              | string    | ✓        | Markdown content                                         |
-| `tags`                 | string[]  | ✓        | Tags for categorization                                  |
-| `references`           | object    |          | Initial references                                       |
-| `references.skills`    | string[]  |          | Names of related skills                                  |
-| `references.resources` | integer[] |          | Resource IDs                                             |
-| `references.facts`     | integer[] |          | Fact IDs                                                 |
-| `executionLogId`       | integer   |          | ID of execution log that validated this skill            |
-
-**Example:**
+Example:
 
 ```json
 {
@@ -445,24 +613,21 @@ Create a skill document.
 }
 ```
 
-### `update_skill`
+### update_skill
 
-Update a skill's metadata, tags, or references. Does not modify file content - use `sync_skill` after editing the file
-directly.
-
-**Parameters:**
+Update a skill's metadata, tags, or references. Does not modify file content - use `sync_skill` after editing the file directly.
 
 | Name             | Type     | Required | Description                                   |
 | ---------------- | -------- | -------- | --------------------------------------------- |
-| `name`           | string   | ✓        | Skill name                                    |
-| `title`          | string   |          | New title                                     |
-| `description`    | string   |          | New description                               |
-| `tags`           | string[] |          | Replace all tags                              |
-| `appendTags`     | string[] |          | Add tags (keeps existing)                     |
-| `references`     | object   |          | Modify references                             |
-| `executionLogId` | integer  |          | ID of execution log that validated this skill |
+| `name`           | string   | yes      | Skill name                                    |
+| `title`          | string   | no       | New title                                     |
+| `description`    | string   | no       | New description                               |
+| `tags`           | string[] | no       | Replace all tags                              |
+| `appendTags`     | string[] | no       | Add tags (keeps existing)                     |
+| `references`     | object   | no       | Modify references                             |
+| `executionLogId` | integer  | no       | ID of execution log that validated this skill |
 
-**Reference Updates:**
+Reference updates:
 
 ```json
 {
@@ -475,18 +640,15 @@ directly.
 }
 ```
 
-### `sync_skill`
+### sync_skill
 
-Sync a skill's content hash after the file has been modified externally. Call this after editing the skill file
-directly.
-
-**Parameters:**
+Sync a skill's content hash after the file has been modified externally. Call this after editing the skill file directly.
 
 | Name   | Type   | Required | Description |
 | ------ | ------ | -------- | ----------- |
-| `name` | string | ✓        | Skill name  |
+| `name` | string | yes      | Skill name  |
 
-**Returns:**
+Returns:
 
 ```json
 {
@@ -496,18 +658,16 @@ directly.
 }
 ```
 
-### `delete_skills`
+### delete_skills
 
 Delete skills by name. Optionally delete the skill files from disk.
 
-**Parameters:**
-
 | Name          | Type     | Required | Default | Description                  |
 | ------------- | -------- | -------- | ------- | ---------------------------- |
-| `names`       | string[] | ✓        |         | Skill names to delete        |
-| `deleteFiles` | boolean  |          | false   | Delete skill files from disk |
+| `names`       | string[] | yes      | -       | Skill names to delete        |
+| `deleteFiles` | boolean  | no       | false   | Delete skill files from disk |
 
-**Returns:**
+Returns:
 
 ```json
 {
@@ -516,89 +676,158 @@ Delete skills by name. Optionally delete the skill files from disk.
 }
 ```
 
-### `search_skills`
+### search_skills
 
 Search skills by tags or title.
 
-**Parameters:**
-
 | Name      | Type     | Required | Default  | Description                            |
 | --------- | -------- | -------- | -------- | -------------------------------------- |
-| `tags`    | string[] |          |          | Filter by tags                         |
-| `query`   | string   |          |          | Search title                           |
-| `limit`   | integer  |          | 30       | Maximum results                        |
-| `orderBy` | enum     |          | "recent" | Sort order: "recent", "oldest", "name" |
+| `tags`    | string[] | no       | -        | Filter by tags                         |
+| `query`   | string   | no       | -        | Search title                           |
+| `limit`   | integer  | no       | 30       | Maximum results                        |
+| `orderBy` | enum     | no       | "recent" | Sort order: "recent", "oldest", "name" |
 
-**Returns:** Skills with `hasStaleDeps` flag indicating stale dependencies.
+Returns: Skills with `hasStaleDeps` flag indicating stale dependencies.
 
-### `get_skill`
+### get_skills
 
-Retrieve a skill with full content.
+Retrieve one or more skills with full content.
 
-**Parameters:**
+| Name          | Type     | Required | Default | Description                      |
+| ------------- | -------- | -------- | ------- | -------------------------------- |
+| `names`       | string[] | yes      | -       | Skill names to retrieve          |
+| `hydrateRefs` | boolean  | no       | false   | Include referenced skill content |
 
-| Name          | Type    | Required | Default | Description                      |
-| ------------- | ------- | -------- | ------- | -------------------------------- |
-| `name`        | string  | ✓        |         | Skill name                       |
-| `hydrateRefs` | boolean |          | false   | Include referenced skill content |
+Returns:
 
-### `link_skill`
+```json
+{
+  "skills": [{ "name": "...", "title": "...", "content": "...", "tags": [...], "references": {...} }],
+  "notFound": ["missing-skill"]
+}
+```
+
+### link_skill
 
 Add references from a skill to other entities.
 
-**Parameters:**
-
 | Name                    | Type      | Required | Description                          |
 | ----------------------- | --------- | -------- | ------------------------------------ |
-| `skillName`             | string    | ✓        | Source skill                         |
-| `linkSkills`            | array     |          | Skills to link                       |
-| `linkSkills[].name`     | string    | ✓        | Target skill name                    |
-| `linkSkills[].relation` | enum      | ✓        | `prerequisite`, `related`, `extends` |
-| `linkResources`         | integer[] |          | Resource IDs to link                 |
-| `linkFacts`             | integer[] |          | Fact IDs to link                     |
+| `skillName`             | string    | yes      | Source skill                         |
+| `linkSkills`            | array     | no       | Skills to link                       |
+| `linkSkills[].name`     | string    | yes      | Target skill name                    |
+| `linkSkills[].relation` | enum      | yes      | `prerequisite`, `related`, `extends` |
+| `linkResources`         | integer[] | no       | Resource IDs to link                 |
+| `linkFacts`             | integer[] | no       | Fact IDs to link                     |
+
+### get_dependency_graph
+
+Get a dependency graph for a skill showing all connected skills, resources, and facts.
+
+| Name             | Type    | Required | Default | Description                  |
+| ---------------- | ------- | -------- | ------- | ---------------------------- |
+| `skillName`      | string  | yes      | -       | Skill name to graph          |
+| `maxDepth`       | integer | no       | 3       | Maximum depth to traverse    |
+| `includeContent` | boolean | no       | false   | Include content of each node |
+
+Returns:
+
+```json
+{
+  "root": {
+    "name": "deploy-guide",
+    "title": "Deploy Guide",
+    "tags": ["devops"]
+  },
+  "nodes": [
+    {
+      "type": "skill",
+      "id": "docker-basics",
+      "name": "docker-basics",
+      "depth": 1
+    },
+    {
+      "type": "resource",
+      "id": 5,
+      "name": "Dockerfile",
+      "isStale": false,
+      "depth": 1
+    }
+  ],
+  "edges": [
+    {
+      "from": "deploy-guide",
+      "to": "docker-basics",
+      "relation": "prerequisite"
+    },
+    { "from": "deploy-guide", "to": "5", "relation": "resource" }
+  ],
+  "summary": {
+    "totalSkills": 2,
+    "totalResources": 1,
+    "totalFacts": 0,
+    "staleCount": 0,
+    "maxDepthReached": 1
+  }
+}
+```
+
+### restore_skills
+
+Restore soft-deleted skills.
+
+| Name    | Type     | Required | Description                             |
+| ------- | -------- | -------- | --------------------------------------- |
+| `names` | string[] | yes      | Names of soft-deleted skills to restore |
+
+Returns:
+
+```json
+{ "restored": 2 }
+```
 
 ## Execution Logs
 
 Persistent records of commands, tests, builds, and other actions. Enables institutional memory for what works.
 
-### `submit_execution_logs`
+### submit_execution_logs
 
 Submit one or more execution logs.
 
-**Parameters:**
+| Name                      | Type     | Required | Description                                            |
+| ------------------------- | -------- | -------- | ------------------------------------------------------ |
+| `logs`                    | array    | yes      | Array of execution log objects                         |
+| `logs[].command`          | string   | yes      | The command or action that was executed                |
+| `logs[].success`          | boolean  | yes      | Whether the execution succeeded                        |
+| `logs[].workingDirectory` | string   | no       | Working directory where command was run                |
+| `logs[].context`          | string   | no       | What was being attempted (free text for searchability) |
+| `logs[].output`           | string   | no       | The output (stdout/stderr) from the execution          |
+| `logs[].exitCode`         | integer  | no       | Exit code from the command                             |
+| `logs[].durationMs`       | integer  | no       | How long the execution took in milliseconds            |
+| `logs[].skillName`        | string   | no       | The skill this execution relates to                    |
+| `logs[].tags`             | string[] | no       | Tags for categorization                                |
 
-| Name                      | Type      | Required | Description                                           |
-| ------------------------- | --------- | -------- | ----------------------------------------------------- |
-| `logs`                    | array     | ✓        | Array of execution log objects                        |
-| `logs[].command`          | string    | ✓        | The command or action that was executed               |
-| `logs[].success`          | boolean   | ✓        | Whether the execution succeeded                       |
-| `logs[].workingDirectory` | string    |          | Working directory where command was run               |
-| `logs[].context`          | string    |          | What was being attempted (free text for searchability)|
-| `logs[].output`           | string    |          | The output (stdout/stderr) from the execution         |
-| `logs[].exitCode`         | integer   |          | Exit code from the command                            |
-| `logs[].durationMs`       | integer   |          | How long the execution took in milliseconds           |
-| `logs[].skillName`        | string    |          | The skill this execution relates to                   |
-| `logs[].tags`             | string[]  |          | Tags for categorization                               |
-
-**Example:**
+Example:
 
 ```json
 {
-  "logs": [{
-    "command": "bun test",
-    "workingDirectory": "./",
-    "context": "Verified test command works",
-    "output": "✓ 42 tests passed",
-    "exitCode": 0,
-    "success": true,
-    "durationMs": 3500,
-    "skillName": "run-tests",
-    "tags": ["testing"]
-  }]
+  "logs": [
+    {
+      "command": "bun test",
+      "workingDirectory": "./",
+      "context": "Verified test command works",
+      "output": "42 tests passed",
+      "exitCode": 0,
+      "success": true,
+      "durationMs": 3500,
+      "skillName": "run-tests",
+      "tags": ["testing"]
+    }
+  ]
 }
 ```
 
-**Returns:**
+Returns:
 
 ```json
 {
@@ -607,43 +836,35 @@ Submit one or more execution logs.
 }
 ```
 
-### `search_execution_logs`
+### search_execution_logs
 
 Search execution logs by tags, query, success status, or skill name.
 
-**Parameters:**
+| Name        | Type     | Required | Default  | Description                                  |
+| ----------- | -------- | -------- | -------- | -------------------------------------------- |
+| `tags`      | string[] | no       | -        | Filter by tags                               |
+| `query`     | string   | no       | -        | Free text search in command, context, output |
+| `success`   | boolean  | no       | -        | Filter by success status                     |
+| `skillName` | string   | no       | -        | Filter by related skill name                 |
+| `limit`     | integer  | no       | 50       | Maximum results                              |
+| `cursor`    | string   | no       | -        | Pagination cursor                            |
+| `orderBy`   | enum     | no       | "recent" | Sort order: "recent", "oldest"               |
 
-| Name        | Type     | Required | Default  | Description                                     |
-| ----------- | -------- | -------- | -------- | ----------------------------------------------- |
-| `tags`      | string[] |          |          | Filter by tags                                  |
-| `query`     | string   |          |          | Free text search in command, context, output    |
-| `success`   | boolean  |          |          | Filter by success status                        |
-| `skillName` | string   |          |          | Filter by related skill name                    |
-| `limit`     | integer  |          | 50       | Maximum results                                 |
-| `cursor`    | string   |          |          | Pagination cursor                               |
-| `orderBy`   | enum     |          | "recent" | Sort order: "recent", "oldest"                  |
-
-**Example:**
+Example:
 
 ```json
-// Find successful database commands
 { "query": "drizzle", "success": true, "tags": ["database"] }
-
-// Check validation history for a skill
-{ "skillName": "run-tests", "success": true }
 ```
 
-### `get_execution_log`
+### get_execution_log
 
 Get a specific execution log by ID.
 
-**Parameters:**
+| Name | Type    | Required | Description      |
+| ---- | ------- | -------- | ---------------- |
+| `id` | integer | yes      | Execution log ID |
 
-| Name | Type    | Required | Description           |
-| ---- | ------- | -------- | --------------------- |
-| `id` | integer | ✓        | Execution log ID      |
-
-**Returns:**
+Returns:
 
 ```json
 {
@@ -651,7 +872,7 @@ Get a specific execution log by ID.
   "command": "bun test",
   "workingDirectory": "./",
   "context": "Running unit tests",
-  "output": "✓ 42 tests passed",
+  "output": "42 tests passed",
   "exitCode": 0,
   "success": true,
   "durationMs": 3500,
@@ -663,116 +884,121 @@ Get a specific execution log by ID.
 
 ## Maintenance
 
-### `check_stale`
+### check_stale
 
 Check for stale content needing attention.
 
-**Parameters:**
+| Name             | Type    | Required | Default | Description                                                |
+| ---------------- | ------- | -------- | ------- | ---------------------------------------------------------- |
+| `checkResources` | boolean | no       | true    | Check resources                                            |
+| `checkSkills`    | boolean | no       | true    | Check skills                                               |
+| `checkFacts`     | boolean | no       | true    | Check facts                                                |
+| `maxAgeHours`    | integer | no       | 168     | Hours before content is considered stale (default: 7 days) |
 
-| Name             | Type    | Required | Default | Description                                               |
-| ---------------- | ------- | -------- | ------- | --------------------------------------------------------- |
-| `checkResources` | boolean |          | true    | Check resources                                           |
-| `checkSkills`    | boolean |          | true    | Check skills                                              |
-| `checkFacts`     | boolean |          | true    | Check facts                                               |
-| `maxAgeHours`    | integer |          | 168     | Hours before content is considered stale (default: 7 days)|
+Returns:
 
-**Returns:**
-
-- `staleResources`: Resources not verified recently (includes hours stale, retrieval methods)
+- `staleResources`: Resources past the staleness threshold (includes hours stale, retrieval methods)
+- `approachingStaleResources`: Resources past the warning threshold but not yet stale (configurable via `staleness_warning_threshold`)
 - `staleSkills`: Skills with stale dependencies
 - `unverifiedFacts`: Old unverified facts
-- `summary`: Counts by category
+- `skillsNeedingReview`: Skills flagged for review
+- `incompleteDescriptions`: Items with placeholder descriptions
+- `summary`: Counts by category including `approachingStaleResources`
 
-### `mark_resources_refreshed`
+### mark_resources_refreshed
 
 Mark resources as verified after refreshing.
 
-**Parameters:**
-
 | Name          | Type      | Required | Description                    |
 | ------------- | --------- | -------- | ------------------------------ |
-| `resourceIds` | integer[] | ✓        | Resource IDs to mark refreshed |
+| `resourceIds` | integer[] | yes      | Resource IDs to mark refreshed |
+
+### Background Worker
+
+The background worker performs periodic maintenance. Run separately:
+
+```bash
+bunx factsets worker --database-url .facts.db
+```
+
+Worker tasks (intervals configurable via `worker_interval_*` keys):
+
+| Task         | Default Interval | Description                             |
+| ------------ | ---------------- | --------------------------------------- |
+| Auto-verify  | 1 hour           | Mark old unverified facts as verified   |
+| Expire facts | 2 hours          | Soft-delete unverified facts > 30 days  |
+| Prune tags   | 24 hours         | Remove unused tags (if enabled)         |
+| Hard delete  | 24 hours         | Permanently remove expired soft-deletes |
+
+Worker state persists in the database and survives restarts.
 
 ## Prompts
 
 Prompts provide pre-built context assembly for common tasks. All prompts are also available as tools with the same functionality but structured JSON output.
 
-### `knowledge_context`
+### knowledge_context
 
 Build knowledge context from tags. Assembles relevant facts, resources, and skills into formatted text.
 
-**Arguments:**
-
 | Name                       | Type   | Required | Default | Description                          |
 | -------------------------- | ------ | -------- | ------- | ------------------------------------ |
-| `tags`                     | string | ✓        |         | JSON array of tags (e.g., `["api"]`) |
-| `maxFacts`                 | string |          | "50"    | Maximum facts                        |
-| `maxResources`             | string |          | "20"    | Maximum resources                    |
-| `maxSkills`                | string |          | "10"    | Maximum skills                       |
-| `includeStalenessWarnings` | string |          | "true"  | Include staleness warnings section   |
+| `tags`                     | string | yes      | -       | JSON array of tags (e.g., `["api"]`) |
+| `maxFacts`                 | string | no       | "50"    | Maximum facts                        |
+| `maxResources`             | string | no       | "20"    | Maximum resources                    |
+| `maxSkills`                | string | no       | "10"    | Maximum skills                       |
+| `includeStalenessWarnings` | string | no       | "true"  | Include staleness warnings section   |
 
-**Tool equivalent:** `get_knowledge_context` (takes array for `tags` instead of JSON string)
+Tool equivalent: `get_knowledge_context` (takes array for `tags` instead of JSON string)
 
-**Example:**
-
-```
-Use knowledge_context with tags='["api","auth"]' to get context for working on authentication.
-```
-
-**Output includes:**
+Output includes:
 
 - Known Facts (verified/unverified)
 - Relevant Resources (with snapshot preview)
 - Available Skills (with stale dependency warnings)
 - Staleness Warnings section (when enabled)
 
-### `recall_skill`
+### recall_skill
 
 Recall a skill with full content and references.
 
-**Arguments:**
-
 | Name          | Type   | Required | Default | Description                      |
 | ------------- | ------ | -------- | ------- | -------------------------------- |
-| `name`        | string | ✓        |         | Skill name                       |
-| `includeRefs` | string |          | "false" | Include referenced skill content |
+| `name`        | string | yes      | -       | Skill name                       |
+| `includeRefs` | string | no       | "false" | Include referenced skill content |
 
-**Tool equivalent:** `build_skill_context` (takes boolean for `includeRefs`)
+Tool equivalent: `build_skill_context` (takes boolean for `includeRefs`)
 
-### `maintenance_report`
+### maintenance_report
 
 Generate a maintenance report.
 
-**Arguments:**
+| Name          | Type   | Required | Default | Description              |
+| ------------- | ------ | -------- | ------- | ------------------------ |
+| `maxAgeHours` | string | no       | "168"   | Stale threshold in hours |
 
-| Name          | Type   | Required | Default | Description               |
-| ------------- | ------ | -------- | ------- | ------------------------- |
-| `maxAgeHours` | string |          | "168"   | Stale threshold in hours  |
+Tool equivalent: `get_maintenance_report` (takes number for `maxAgeHours`)
 
-**Tool equivalent:** `get_maintenance_report` (takes number for `maxAgeHours`)
-
-**Returns:** Formatted report with:
+Returns formatted report with:
 
 - Stale resources with retrieval methods
 - Skills with stale dependencies
 - Old unverified facts
 - Actionable recommendations
 
-### `refresh_guide`
+### refresh_guide
 
 Get step-by-step instructions for refreshing a resource.
 
-**Arguments:**
-
 | Name         | Type   | Required | Description            |
 | ------------ | ------ | -------- | ---------------------- |
-| `resourceId` | string | ✓        | Resource ID to refresh |
+| `resourceId` | string | yes      | Resource ID to refresh |
 
-**Tool equivalent:** `get_refresh_guide` (takes number for `resourceId`)
+Tool equivalent: `get_refresh_guide` (takes number for `resourceId`)
 
 ## Prompt Tools
 
 These tools provide the same functionality as prompts but with:
+
 - Proper typed inputs (arrays, numbers, booleans instead of strings)
 - Structured JSON output including both markdown and metadata
 - Better programmatic integration for agents
@@ -788,12 +1014,87 @@ These tools provide the same functionality as prompts but with:
 
 These tools provide access to built-in documentation and guides:
 
-| Tool                    | Description                                                   |
-| ----------------------- | ------------------------------------------------------------- |
-| `get_agent_guide`       | **Call first!** Returns the agent workflow guide with phases, best practices, and tool reference |
-| `get_factsets_concept`  | Returns the conceptual overview explaining design philosophy, core concepts, and data model |
+| Tool                | Description                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| `get_agent_guide`   | Call first. Returns the agent workflow guide with phases, best practices, and tool reference |
+| `get_concept_guide` | Returns the conceptual overview explaining design philosophy, core concepts, and data model  |
 
-**Usage:** Agents should call `get_agent_guide` when first interacting with Factsets to understand the workflow.
+Usage: Agents should call `get_agent_guide` when first interacting with Factsets to understand the workflow.
+
+## User Preferences Tools
+
+These tools manage user output preferences. Agents should check preferences before generating output and update them when users express style preferences.
+
+### get_preference_prompt
+
+Get a natural language prompt describing all active user preferences. Call at session start and before generating significant output.
+
+No parameters.
+
+Returns formatted text suitable for inclusion in agent context.
+
+### get_user_preferences
+
+Get all user preferences as structured data.
+
+No parameters.
+
+Returns:
+
+```json
+{
+  "preferences": {
+    "tone": "neutral",
+    "verbosity": "concise",
+    "emojiUsage": "banned",
+    ...
+  },
+  "nonDefaults": ["pref_code_comments"],
+  "categories": {
+    "communication": { "tone": "neutral", ... },
+    "code": { "codeComments": "minimal", ... },
+    ...
+  }
+}
+```
+
+### infer_preference
+
+Update a user preference based on explicit statement or inferred behavior.
+
+| Name         | Type    | Required | Description                                       |
+| ------------ | ------- | -------- | ------------------------------------------------- |
+| `key`        | string  | yes      | Preference key (e.g., `pref_code_comments`)       |
+| `value`      | string  | yes      | New value                                         |
+| `reason`     | string  | yes      | Why this preference is being set                  |
+| `confidence` | number  | yes      | Confidence 0.0-1.0 (require >= 0.8 for inference) |
+| `explicit`   | boolean | yes      | True if user explicitly stated preference         |
+
+Example:
+
+```json
+{
+  "key": "pref_code_comments",
+  "value": "verbose",
+  "reason": "User explicitly requested more comments",
+  "confidence": 1.0,
+  "explicit": true
+}
+```
+
+### reset_preferences
+
+Reset preferences to default values.
+
+| Name   | Type     | Required | Description                             |
+| ------ | -------- | -------- | --------------------------------------- |
+| `keys` | string[] | no       | Specific keys to reset (all if omitted) |
+
+Returns:
+
+```json
+{ "reset": 5 }
+```
 
 ## Client Directory Mapping
 
@@ -812,7 +1113,7 @@ Skills are saved as markdown files. The directory varies by client:
 ### First Time Setup
 
 1. Call `get_agent_guide` to understand the workflow
-2. Call `get_factsets_concept` for design philosophy (optional)
+2. Call `get_concept_guide` for design philosophy (optional)
 
 ### Building Context for a Task
 
@@ -825,7 +1126,7 @@ Skills are saved as markdown files. The directory varies by client:
 1. `create_tags` for new categories
 2. `submit_facts` for atomic knowledge
 3. `add_resources` for external references
-4. `create_skill` for procedural knowledge (link `executionLogId` for command-based skills!)
+4. `create_skill` for procedural knowledge (link `executionLogId` for command-based skills)
 
 ### Recording Command History
 

@@ -10,6 +10,8 @@ import {
 	tags,
 } from "../schema.js";
 import { incrementTagUsage } from "./tags.js";
+import { expandTags } from "./tag-relationships.js";
+import { getContextBudget } from "./config.js";
 import type { ContextBuildInput } from "../../schemas/context.js";
 import { fileExists, readTextFile } from "../../utils/fs.js";
 
@@ -17,14 +19,22 @@ export async function buildContext(
 	db: DB,
 	input: ContextBuildInput,
 ): Promise<string | object> {
-	const maxFacts = input.maxFacts ?? 30;
-	const maxResources = input.maxResources ?? 10;
-	const maxSkills = input.maxSkills ?? 5;
+	// Use config-based defaults if not provided in input
+	const configMaxFacts = await getContextBudget(db, "facts");
+	const configMaxResources = await getContextBudget(db, "resources");
+	const configMaxSkills = await getContextBudget(db, "skills");
+
+	const maxFacts = input.maxFacts ?? configMaxFacts;
+	const maxResources = input.maxResources ?? configMaxResources;
+	const maxSkills = input.maxSkills ?? configMaxSkills;
+
+	// Expand tags using synonyms and hierarchies from config
+	const expandedTags = await expandTags(db, input.tags);
 
 	const tagResults = await db
 		.select({ id: tags.id, name: tags.name })
 		.from(tags)
-		.where(inArray(tags.name, input.tags));
+		.where(inArray(tags.name, expandedTags));
 
 	if (tagResults.length === 0) {
 		return input.format === "json"

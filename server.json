@@ -1,0 +1,23 @@
+{
+	"$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+	"name": "io.github.joshua-auchincloss/factsets",
+	"title": "Factsets MCP Server",
+	"description": "An MCP server that provides a local, persistent, self-maintaining knowledge base for AI agents",
+	"repository": {
+		"url": "https://github.com/joshua-auchincloss/factsets",
+		"source": "github"
+	},
+	"version": "0.1.4",
+	"packages": [
+		{
+			"registryType": "npm",
+			"identifier": "factsets",
+			"version": "0.1.4",
+			"runtimeHint": "npx",
+			"transport": {
+				"type": "stdio"
+			},
+			"packageArguments": [{ "type": "positional", "value": "mcp-server" }]
+		}
+	]
+}

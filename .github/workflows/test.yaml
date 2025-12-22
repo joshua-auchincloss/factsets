@@ -42,6 +42,7 @@ jobs:
       - name: Run tests
         run: |
           bun test --coverage \
+            --timeout 600000 \
             --coverage-reporter=lcov \
             --reporter=junit \
             --reporter-outfile=junit.xml

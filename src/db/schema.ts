@@ -7,6 +7,9 @@ import {
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
+// Inlined constant to avoid module resolution issues with drizzle-kit
+const PLACEHOLDER_DESCRIPTION = "[auto-migrated] Needs description";
+
 export const config = sqliteTable("config", {
 	key: text("key").primaryKey(),
 	value: text("value").notNull(),
@@ -65,6 +68,7 @@ export const resources = sqliteTable(
 		id: integer("id").primaryKey({ autoIncrement: true }),
 		uri: text("uri").notNull().unique(),
 		type: text("type").notNull(),
+		description: text("description").default(PLACEHOLDER_DESCRIPTION).notNull(),
 		snapshot: text("snapshot"),
 		snapshotHash: text("snapshot_hash"),
 		retrievalMethod: text("retrieval_method", { mode: "json" }).$type<{
@@ -107,7 +111,7 @@ export const skills = sqliteTable(
 		id: integer("id").primaryKey({ autoIncrement: true }),
 		name: text("name").notNull().unique(),
 		title: text("title").notNull(),
-		description: text("description"),
+		description: text("description").default(PLACEHOLDER_DESCRIPTION).notNull(),
 		filePath: text("file_path").notNull(),
 		contentHash: text("content_hash"),
 		retrievalCount: integer("retrieval_count").default(0).notNull(),
@@ -232,3 +236,16 @@ export const executionLogTags = sqliteTable(
 	},
 	(table) => [primaryKey({ columns: [table.executionLogId, table.tagId] })],
 );
+
+/**
+ * Worker state table for durable tracking of background task execution.
+ * Persists across process restarts (e.g., editor restarts).
+ */
+export const workerState = sqliteTable("worker_state", {
+	taskName: text("task_name").primaryKey(),
+	lastRunAt: text("last_run_at"),
+	lastStatus: text("last_status"), // 'success', 'error', 'skipped'
+	lastMessage: text("last_message"),
+	itemsProcessed: integer("items_processed").default(0).notNull(),
+	updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});

@@ -4,25 +4,24 @@
 
 AI agents face fundamental limitations:
 
-1. **Ephemeral context** - Every session starts fresh; learned knowledge evaporates
-1. **Token inefficiency** - Users re-explain concepts; agents re-discover patterns
-1. **No persistent learning** - Corrections and insights vanish after sessions
-1. **Resource amnesia** - Repeatedly fetch same docs, re-read same files
-1. **Skill degradation** - Trial-and-error improvements aren't captured
-1. **No execution memory** - Successful commands forgotten, same mistakes repeated
+1. Ephemeral context - every session starts fresh; learned knowledge evaporates
+2. Token inefficiency - users re-explain concepts; agents re-discover patterns
+3. No persistent learning - corrections and insights vanish after sessions
+4. Resource amnesia - repeatedly fetch same docs, re-read same files
+5. Skill degradation - trial-and-error improvements are not captured
+6. No execution memory - successful commands forgotten, same mistakes repeated
 
 ## Core Philosophy
 
-Factsets enables agents to **self-maintain** their operational context. Rather than relying on users to provide context
-or massive context windows to hold everything, agents actively curate their knowledge base.
+Factsets enables agents to self-maintain their operational context. Rather than relying on users to provide context or massive context windows to hold everything, agents actively curate their knowledge base.
 
 Key principles:
 
-- **Atomic knowledge units** - Small, digestible pieces that compose well
-- **Self-curation** - Agents decide what's worth remembering
-- **Searchability over storage** - Find the right context, not all context
-- **Reproducibility** - Not just what, but how to get it again
-- **Progressive refinement** - Knowledge improves through use
+- Atomic knowledge units - small, digestible pieces that compose well
+- Self-curation - agents decide what is worth remembering
+- Searchability over storage - find the right context, not all context
+- Reproducibility - not just what, but how to get it again
+- Progressive refinement - knowledge improves through use
 
 ## Core Concepts
 
@@ -30,22 +29,22 @@ Key principles:
 
 Atomic units of knowledge about a project, codebase, or domain.
 
-**Characteristics:**
+Characteristics:
 
 - Small (1-3 sentences ideal)
 - Self-contained (understandable without deep context)
 - Tagged for discovery
 - Timestamped for freshness
-- Confidence-scored (agent's certainty)
+- Confidence-scored (agent certainty)
 
-**Examples:**
+Examples:
 
 - "This project uses Bun runtime, not Node.js"
 - "User prefers explicit error messages over generic ones"
 - "The main entry point is src/main.ts"
 - "API responses are always wrapped in { data, error } shape"
 
-**Anti-patterns (what NOT to store as facts):**
+Anti-patterns (what not to store as facts):
 
 - Long explanations (use skills instead)
 - File contents (use resources instead)
@@ -55,20 +54,18 @@ Atomic units of knowledge about a project, codebase, or domain.
 
 References to external content with cached snapshots and retrieval methods.
 
-**Components:**
+Components:
 
-- **URI** - Location (file path, URL, etc.)
-- **Type** - file, url, api, command-output
-- **Snapshot** - Cached content at last retrieval
-- **Retrieval method** - How to refresh (command, fetch, etc.)
-- **Content hash** - For staleness detection
-- **Tags** - For discovery
+- URI - location (file path, URL, etc.)
+- Type - file, url, api, command-output
+- Snapshot - cached content at last retrieval
+- Retrieval method - how to refresh (command, fetch, etc.)
+- Content hash - for staleness detection
+- Tags - for discovery
 
-**Why snapshots matter:** Instead of: "Read the file at X" Store: "Content of X" + "How to refresh X"
+Why snapshots matter: Instead of "Read the file at X", store "Content of X" + "How to refresh X". This eliminates redundant I/O while maintaining freshness awareness.
 
-This eliminates redundant I/O while maintaining freshness awareness.
-
-**Examples:**
+Examples:
 
 - Documentation URL + rendered markdown snapshot
 - Config file path + content + `cat` command
@@ -78,51 +75,46 @@ This eliminates redundant I/O while maintaining freshness awareness.
 
 Markdown-based knowledge documents that capture procedural understanding.
 
-**Location:** `.github/prompts/skills/` (project-scoped, version-controlled)
+Location: `.github/prompts/skills/` (project-scoped, version-controlled)
 
-**Characteristics:**
+Characteristics:
 
 - Human-readable markdown
 - Self-updating based on learning
 - Searchable via SQL counterpart
 - Hierarchical (can reference other skills)
 
-**Structure:**
+Structure:
 
 ```
 skills/
-  project-patterns.md      # High-level architecture understanding
-  testing-approach.md      # How to write tests for this project
-  api-conventions.md       # API design patterns used
-  error-handling.md        # Error handling strategies
-  deployment.md            # Deployment procedures
+  project-patterns.md
+  testing-approach.md
+  api-conventions.md
+  error-handling.md
+  deployment.md
 ```
 
-**Why markdown + SQL?**
+Why markdown + SQL:
 
-- Markdown: Readable by humans, injectable into prompts
-- SQL: Searchable by tags, filterable by recency/relevance
+- Markdown: readable by humans, injectable into prompts
+- SQL: searchable by tags, filterable by recency/relevance
 
-**Self-updating behavior:** When an agent learns something through:
-
-- User correction
-- Trial and error
-- Documentation reading
-- Code exploration
-
-...the relevant skill file should be updated with the new understanding.
+Self-updating behavior: When an agent learns something through user correction, trial and error, documentation reading, or code exploration, the relevant skill file should be updated with the new understanding.
 
 ### Execution Logs
 
 Persistent records of commands, tests, builds, and other actions that agents perform.
 
-**Purpose:**
-- **Institutional memory** - Remember what commands worked
-- **Skill validation** - Link skills to the execution that proved they work
-- **Failure learning** - Track what didn't work to avoid repeating mistakes
-- **Re-validation** - Re-run logged commands to verify skills still work
+Purpose:
 
-**Characteristics:**
+- Institutional memory - remember what commands worked
+- Skill validation - link skills to the execution that proved they work
+- Failure learning - track what did not work to avoid repeating mistakes
+- Re-validation - re-run logged commands to verify skills still work
+
+Characteristics:
+
 - Command and output captured
 - Success/failure status
 - Working directory context
@@ -130,40 +122,40 @@ Persistent records of commands, tests, builds, and other actions that agents per
 - Optional skill linkage
 - Tagged for discovery
 
-**Examples:**
-- `bun test` → success, linked to `run-tests` skill
-- `bun drizzle-kit generate` → success, tagged `database`, `migrations`
-- `npm run build` → failure, output shows missing dependency
+Examples:
 
-**Workflow pattern:**
-```
+- `bun test` -> success, linked to `run-tests` skill
+- `bun drizzle-kit generate` -> success, tagged `database`, `migrations`
+- `npm run build` -> failure, output shows missing dependency
+
+Workflow pattern:
+
 1. Agent runs command
-2. Command succeeds → log it with submit_execution_logs
+2. Command succeeds -> log it with submit_execution_logs
 3. Create/update skill referencing the execution log
 4. Later: re-validate skill by re-running logged command
-```
 
 ### Tags
 
 Cross-cutting categorization system enabling discovery across all entity types.
 
-**Properties:**
+Properties:
 
 - Name (unique identifier)
 - Description (what this tag represents)
 - Usage count (for relevance sorting)
 
-**Usage patterns:**
+Usage patterns:
 
 - Filter facts by topic: `database`, `api`, `testing`
 - Group resources by domain: `docs`, `config`, `schemas`
 - Categorize skills by area: `setup`, `debugging`, `patterns`
 
-**Tag hygiene:**
+Tag hygiene:
 
 - Prefer existing tags over creating new ones
 - Use hierarchical naming: `testing`, `testing:unit`, `testing:e2e`
-- Periodic cleanup of unused tags
+- Periodic cleanup: use `prune_orphan_tags` to remove unused tags
 
 ## Advanced Concepts
 
@@ -171,13 +163,13 @@ Cross-cutting categorization system enabling discovery across all entity types.
 
 Not all context is equally useful. Relevance factors:
 
-1. **Recency** - Recent facts may be more accurate
-1. **Usage frequency** - Oft-retrieved facts are valuable
-1. **Confidence** - Agent's certainty when creating
-1. **Freshness** - Resource staleness since last verification
-1. **Tag match strength** - Exact vs partial tag matches
+1. Recency - recent facts may be more accurate
+2. Usage frequency - oft-retrieved facts are valuable
+3. Confidence - agent certainty when creating
+4. Freshness - resource staleness since last verification
+5. Tag match strength - exact vs partial tag matches
 
-**Ordering Options:** Search operations support `orderBy` parameter:
+Ordering options: Search operations support `orderBy` parameter:
 
 - Facts: `recent`, `oldest`, `usage` (by retrieval count)
 - Resources: `recent`, `oldest`, `fresh` (by lastVerifiedAt)
@@ -188,30 +180,32 @@ Not all context is equally useful. Relevance factors:
 
 The ability to rebuild working context from stored knowledge.
 
-**Process:**
+Process:
 
 1. Identify task domain (via user query or explicit tags)
-1. Retrieve relevant tags
-1. Fetch facts matching tags (ordered by relevance)
-1. Fetch resources matching tags
-1. Inject relevant skills as system context
-1. Present as compact text list
+2. Retrieve relevant tags
+3. Fetch facts matching tags (ordered by relevance)
+4. Fetch resources matching tags
+5. Inject relevant skills as system context
+6. Present as compact text list
 
-**Token efficiency:** Facts format: `- [tag1,tag2] fact content here` Resources format:
-`- [type:tag] uri (snapshot_preview...)`
+Token efficiency:
+
+- Facts format: `- [tag1,tag2] fact content here`
+- Resources format: `- [type:tag] uri (snapshot_preview...)`
 
 ### Session Continuity
 
 Tracking what was learned/used in a session for future reference.
 
-**Captured:**
+Captured:
 
 - Which facts were retrieved and useful
 - What new facts were discovered
 - Resources that were accessed
 - Skills that were applied or updated
 
-**Purpose:**
+Purpose:
 
 - Improve relevance scoring over time
 - Identify knowledge gaps
@@ -221,7 +215,7 @@ Tracking what was learned/used in a session for future reference.
 
 Knowing when cached knowledge may be outdated.
 
-**Mechanisms:**
+Mechanisms:
 
 - Content hash comparison (for resources)
 - Timestamp thresholds (configurable via `maxAgeHours`, default 168 = 7 days)
@@ -229,29 +223,57 @@ Knowing when cached knowledge may be outdated.
 - Explicit invalidation (user or agent marks as stale)
 - Dependency tracking (skill depends on resource snapshot hash)
 
-**Proactive Warnings:** The `knowledge_context` prompt includes staleness warnings by default, providing awareness
-without requiring explicit maintenance calls.
+Proactive warnings: The `knowledge_context` prompt includes staleness warnings by default, providing awareness without requiring explicit maintenance calls.
 
 ## MCP Integration
 
 Factsets operates as an MCP server, exposing tools for self-maintenance.
 
-**Tool categories:**
+Tool categories:
 
-1. **Fact management** - Submit, search, update, delete facts
-1. **Resource management** - Add, refresh, search resources
-1. **Skill management** - Create, update, search skills
-1. **Execution log management** - Submit, search, retrieve command history
-1. **Tag management** - Create, list, search by tags
-1. **Context reconstruction** - Build context for a topic
+1. Fact management - submit, search, update, delete facts
+2. Resource management - add, refresh, search resources
+3. Skill management - create, update, search skills
+4. Execution log management - submit, search, retrieve command history
+5. Tag management - create, list, search by tags
+6. Context reconstruction - build context for a topic
 
-**Design principle:** Tools should be **bulk-friendly** - submitting 10 facts should be one call, not ten.
+Design principle: Tools should be bulk-friendly - submitting 10 facts should be one call, not ten.
+
+### Continuous Usage Model
+
+Factsets is designed for headless, continuous operation. Key characteristics:
+
+| Characteristic | Value                                               |
+| -------------- | --------------------------------------------------- |
+| Cost           | Free - no API costs, rate limits, or usage quotas   |
+| Performance    | Battle tested for production workloads              |
+| Capacity       | Cannot be overwhelmed by any single agent session   |
+| Reliability    | Self-maintaining with automatic staleness detection |
+
+Agents should use Factsets tools on every prompt, not just at session boundaries. The system is free and can handle continuous queries without degradation. There is no reason to conserve usage.
+
+Good usage patterns:
+
+- Search facts before answering any question
+- Update facts immediately when information changes
+- Log commands as they execute successfully
+- Capture knowledge the moment it is discovered
+
+Bad usage patterns:
+
+- Only checking facts at session start
+- Waiting for user to request knowledge capture
+- Batching fact updates at end of session
+- Going multiple prompts without using Factsets
+
+An agent that forgets Factsets exists between prompts will drift from ground truth, duplicate work, and provide stale information.
 
 ## Self-Teaching
 
 The system includes prompts that teach agents how to use it effectively.
 
-**Meta-skills stored:**
+Meta-skills stored:
 
 - When to create vs update facts
 - How to choose appropriate tags
@@ -265,8 +287,10 @@ These meta-skills bootstrap agent proficiency with the system itself.
 
 A well-functioning Factsets installation exhibits:
 
-1. **Reduced re-explanation** - Users don't repeat context
-1. **Faster task completion** - Relevant context readily available
-1. **Improved accuracy** - Corrections persist
-1. **Smaller prompts** - Targeted context, not kitchen sink
-1. **Cross-session learning** - Agent improves over time
+1. Reduced re-explanation - users do not repeat context
+2. Faster task completion - relevant context readily available
+3. Improved accuracy - corrections persist
+4. Smaller prompts - targeted context, not kitchen sink
+5. Cross-session learning - agent improves over time
+6. Continuous validation - facts checked on every relevant prompt
+7. Proactive capture - knowledge stored without user prompting

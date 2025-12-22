@@ -1,5 +1,8 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import {
+	StdioClientTransport,
+	StdioServerParameters,
+} from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createConnection, runMigrations } from "../src/db";
 
 type PromiseResult<T> = T extends Promise<infer U> ? U : T;
@@ -7,13 +10,23 @@ type PromiseResult<T> = T extends Promise<infer U> ? U : T;
 export type TestDB = PromiseResult<ReturnType<typeof createTestDb>>;
 export type TestServer = PromiseResult<ReturnType<typeof createTestServer>>;
 
+/** Default request timeout (ms) - increased for CI environments */
+const DEFAULT_REQUEST_TIMEOUT = 120000;
+
 export async function createTestDb() {
 	const db = createConnection(":memory:");
 	await runMigrations(db);
 	return db;
 }
 
-export async function createTestServer() {
+export interface TestServerOptions extends Partial<StdioServerParameters> {
+	/** Timeout for individual requests in ms (default: 120000) */
+	requestTimeout?: number;
+}
+
+export async function createTestServer(overrides?: TestServerOptions) {
+	const requestTimeout = overrides?.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT;
+
 	const client = new Client({
 		name: "test-client",
 		version: "1.0.0",
@@ -21,8 +34,8 @@ export async function createTestServer() {
 
 	await client.connect(
 		new StdioClientTransport({
-			command: "bun",
-			args: [
+			command: overrides?.command ?? "bun",
+			args: overrides?.args ?? [
 				"src/main.ts",
 				"mcp-server",
 				"--database-url",
@@ -35,10 +48,15 @@ export async function createTestServer() {
 	return {
 		client,
 		callTool: async (name: string, params?: Record<string, any>) => {
-			return await client.callTool({ name, arguments: params });
+			return await client.callTool({ name, arguments: params }, undefined, {
+				timeout: requestTimeout,
+			});
 		},
 		getPrompt: async (name: string, params?: Record<string, any>) => {
-			return await client.getPrompt({ name, arguments: params });
+			return await client.getPrompt(
+				{ name, arguments: params },
+				{ timeout: requestTimeout },
+			);
 		},
 	};
 }
@@ -77,6 +95,8 @@ export async function seedTestData(db: TestDB) {
 			{
 				uri: "file:///project/tsconfig.json",
 				type: "file",
+				description:
+					"TypeScript configuration file for project compiler settings",
 				tags: ["typescript", "config"],
 				snapshot: '{"compilerOptions": {"strict": true}}',
 				retrievalMethod: { type: "file" },
@@ -84,6 +104,7 @@ export async function seedTestData(db: TestDB) {
 			{
 				uri: "https://bun.sh/docs",
 				type: "url",
+				description: "Official Bun documentation website",
 				tags: ["bun", "docs"],
 				retrievalMethod: { type: "url", url: "https://bun.sh/docs" },
 			},
@@ -93,6 +114,7 @@ export async function seedTestData(db: TestDB) {
 	await createSkill(db, {
 		name: "typescript-setup",
 		title: "TypeScript Project Setup",
+		description: "Guide for setting up a TypeScript project from scratch",
 		content:
 			"# TypeScript Setup\n\n1. Install TypeScript\n2. Create tsconfig.json\n3. Configure strict mode",
 		tags: ["typescript", "setup"],

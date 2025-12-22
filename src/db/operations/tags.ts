@@ -1,18 +1,31 @@
-import { eq, like, sql, inArray, desc, asc } from "drizzle-orm";
+import { eq, like, sql, inArray, desc, asc, notInArray } from "drizzle-orm";
 import type { DB } from "../index.js";
-import { tags } from "../schema.js";
+import {
+	tags,
+	factTags,
+	resourceTags,
+	skillTags,
+	executionLogTags,
+} from "../schema.js";
+import { getSearchLimit } from "./config.js";
 import type {
 	TagListInput,
 	TagCreateInput,
 	TagListOutput,
 	TagCreateOutput,
+	TagPruneOrphansInput,
+	TagPruneOrphansOutput,
+	TagUpdateInput,
+	TagUpdateOutput,
 } from "../../schemas/tags.js";
 
 export async function listTags(
 	db: DB,
 	input: TagListInput,
 ): Promise<TagListOutput> {
-	const limit = input.limit ?? 100;
+	// Use config-based default limit if not provided
+	const configLimit = await getSearchLimit(db, "tags");
+	const limit = input.limit ?? configLimit;
 	const orderBy = input.orderBy ?? "usage";
 
 	let query = db
@@ -75,6 +88,42 @@ export async function createTags(
 	return {
 		created: results.length,
 		tags: results,
+	};
+}
+
+export async function updateTags(
+	db: DB,
+	input: TagUpdateInput,
+): Promise<TagUpdateOutput> {
+	if (input.updates.length === 0) {
+		return { updated: 0, tags: [] };
+	}
+
+	const updatedTags: { id: number; name: string; description: string }[] = [];
+
+	for (const update of input.updates) {
+		await db
+			.update(tags)
+			.set({
+				description: update.description,
+				updatedAt: sql`CURRENT_TIMESTAMP`,
+			})
+			.where(eq(tags.name, update.name));
+
+		const result = await db
+			.select({ id: tags.id, name: tags.name, description: tags.description })
+			.from(tags)
+			.where(eq(tags.name, update.name))
+			.limit(1);
+
+		if (result[0]) {
+			updatedTags.push(result[0]);
+		}
+	}
+
+	return {
+		updated: updatedTags.length,
+		tags: updatedTags,
 	};
 }
 
@@ -167,4 +216,61 @@ export async function getSuggestedTags(db: DB, limit = 5): Promise<string[]> {
 		.limit(limit);
 
 	return results.map((r) => r.name);
+}
+
+/**
+ * Find and optionally delete orphan tags (tags with zero usage across all junction tables).
+ * This helps keep the knowledge base clean by removing unused tags.
+ */
+export async function pruneOrphanTags(
+	db: DB,
+	input: TagPruneOrphansInput,
+): Promise<TagPruneOrphansOutput> {
+	// Find all tag IDs that are currently in use
+	const [usedInFacts, usedInResources, usedInSkills, usedInLogs] =
+		await Promise.all([
+			db.selectDistinct({ tagId: factTags.tagId }).from(factTags),
+			db.selectDistinct({ tagId: resourceTags.tagId }).from(resourceTags),
+			db.selectDistinct({ tagId: skillTags.tagId }).from(skillTags),
+			db
+				.selectDistinct({ tagId: executionLogTags.tagId })
+				.from(executionLogTags),
+		]);
+
+	const usedTagIds = new Set([
+		...usedInFacts.map((r) => r.tagId),
+		...usedInResources.map((r) => r.tagId),
+		...usedInSkills.map((r) => r.tagId),
+		...usedInLogs.map((r) => r.tagId),
+	]);
+
+	// Find orphan tags (not in any junction table)
+	let orphanTags: { id: number; name: string }[];
+	if (usedTagIds.size === 0) {
+		// All tags are orphans
+		orphanTags = await db.select({ id: tags.id, name: tags.name }).from(tags);
+	} else {
+		orphanTags = await db
+			.select({ id: tags.id, name: tags.name })
+			.from(tags)
+			.where(notInArray(tags.id, [...usedTagIds]));
+	}
+
+	if (orphanTags.length === 0) {
+		return { pruned: 0 };
+	}
+
+	// Dry run mode: return count and list without deleting
+	if (input.dryRun) {
+		return {
+			pruned: orphanTags.length,
+			orphanTags,
+		};
+	}
+
+	// Delete orphan tags
+	const orphanIds = orphanTags.map((t) => t.id);
+	await db.delete(tags).where(inArray(tags.id, orphanIds));
+
+	return { pruned: orphanTags.length };
 }

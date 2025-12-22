@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { spawn, type ChildProcess } from "node:child_process";
 import type { CommandHandler } from "./types.js";
 import { createConnection, runMigrations } from "../db/index.js";
+import { initializeConfigDefaults } from "../db/operations/config.js";
 import { registerTagTools } from "../tools/tags.js";
 import { registerFactTools } from "../tools/facts.js";
 import { registerResourceTools } from "../tools/resources.js";
@@ -11,6 +12,7 @@ import { registerContextTools } from "../tools/context.js";
 import { registerConfigTools } from "../tools/config.js";
 import { registerPromptTools } from "../tools/prompts.js";
 import { registerExecutionLogTools } from "../tools/execution-logs.js";
+import { registerPreferencesTools } from "../tools/preferences.js";
 import { registerKnowledgePrompts } from "../prompts/knowledge.js";
 import { registerMaintenancePrompts } from "../prompts/maintenance.js";
 import { setRuntimeConfig } from "../runtime-config.js";
@@ -19,6 +21,7 @@ import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { registerStaticPrompts } from "../prompts/static-prompts.js";
 import { projectMeta } from "../meta.js";
 import { applySeed } from "../seed/index.js";
+import serverJson from "../../server.json" with { type: "json" };
 
 type Handler = CommandHandler<
 	"mcp-server",
@@ -75,8 +78,11 @@ export const mcpServerHandler = async (
 	});
 
 	const server = new McpServer({
-		name: "factsets",
-		version: "1.0.0",
+		name: serverJson.name,
+		title: serverJson.title,
+		description: serverJson.description,
+		version: serverJson.version,
+		websiteUrl: serverJson.repository.url,
 	});
 
 	const db = createConnection(config.databaseUrl);
@@ -97,6 +103,16 @@ export const mcpServerHandler = async (
 		}
 	}
 
+	// Initialize config defaults (ensures all config keys have values)
+	if (!config.dryRun) {
+		const configInit = await initializeConfigDefaults(db);
+		if (configInit.initialized.length > 0) {
+			console.error(
+				`[factsets] Initialized ${configInit.initialized} config defaults`,
+			);
+		}
+	}
+
 	registerTagTools(server, db);
 	registerFactTools(server, db);
 	registerResourceTools(server, db);
@@ -105,6 +121,7 @@ export const mcpServerHandler = async (
 	registerConfigTools(server, db);
 	registerPromptTools(server, db);
 	registerExecutionLogTools(server, db);
+	registerPreferencesTools(server, db);
 
 	registerStaticPrompts(server);
 	registerKnowledgePrompts(server, db);
@@ -116,6 +133,7 @@ export const mcpServerHandler = async (
 	// --no-watch-skills overrides --watch-skills
 	const shouldWatch =
 		config.watchSkills && !config.noWatchSkills && !config.dryRun;
+
 	let watcherProcess: ChildProcess | undefined;
 
 	if (shouldWatch) {

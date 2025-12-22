@@ -8,3 +8,4 @@ export {
 	isOlderThanHours,
 } from "./dates.js";
 export { computeHash } from "./hash.js";
+export { any, anyIncludes } from "./lists.js";

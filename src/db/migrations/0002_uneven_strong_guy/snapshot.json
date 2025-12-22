@@ -1,0 +1,1323 @@
+{
+	"version": "7",
+	"dialect": "sqlite",
+	"id": "8a4fc391-e821-447a-8e94-d894b0078a29",
+	"prevIds": ["e03b6c91-9c04-48a5-aafd-042c80b73a0e"],
+	"ddl": [
+		{
+			"name": "config",
+			"entityType": "tables"
+		},
+		{
+			"name": "execution_log_tags",
+			"entityType": "tables"
+		},
+		{
+			"name": "execution_logs",
+			"entityType": "tables"
+		},
+		{
+			"name": "fact_tags",
+			"entityType": "tables"
+		},
+		{
+			"name": "facts",
+			"entityType": "tables"
+		},
+		{
+			"name": "resource_tags",
+			"entityType": "tables"
+		},
+		{
+			"name": "resources",
+			"entityType": "tables"
+		},
+		{
+			"name": "skill_facts",
+			"entityType": "tables"
+		},
+		{
+			"name": "skill_resources",
+			"entityType": "tables"
+		},
+		{
+			"name": "skill_skills",
+			"entityType": "tables"
+		},
+		{
+			"name": "skill_tags",
+			"entityType": "tables"
+		},
+		{
+			"name": "skills",
+			"entityType": "tables"
+		},
+		{
+			"name": "tags",
+			"entityType": "tables"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "key",
+			"entityType": "columns",
+			"table": "config"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "value",
+			"entityType": "columns",
+			"table": "config"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "updated_at",
+			"entityType": "columns",
+			"table": "config"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "execution_log_id",
+			"entityType": "columns",
+			"table": "execution_log_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "tag_id",
+			"entityType": "columns",
+			"table": "execution_log_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": true,
+			"default": null,
+			"generated": null,
+			"name": "id",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "command",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "working_directory",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "context",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "output",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "exit_code",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "success",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "duration_ms",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "skill_name",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "execution_logs"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "fact_id",
+			"entityType": "columns",
+			"table": "fact_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "tag_id",
+			"entityType": "columns",
+			"table": "fact_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": true,
+			"default": null,
+			"generated": null,
+			"name": "id",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "content",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "source",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "source_type",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "0",
+			"generated": null,
+			"name": "verified",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "0",
+			"generated": null,
+			"name": "retrieval_count",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "last_retrieved_at",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "system_id",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "system_hash",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "updated_at",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "deleted_at",
+			"entityType": "columns",
+			"table": "facts"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "resource_id",
+			"entityType": "columns",
+			"table": "resource_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "tag_id",
+			"entityType": "columns",
+			"table": "resource_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": true,
+			"default": null,
+			"generated": null,
+			"name": "id",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "uri",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "type",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "'[auto-migrated] Needs description'",
+			"generated": null,
+			"name": "description",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "snapshot",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "snapshot_hash",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "retrieval_method",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "last_verified_at",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "0",
+			"generated": null,
+			"name": "retrieval_count",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "system_id",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "system_hash",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "updated_at",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "deleted_at",
+			"entityType": "columns",
+			"table": "resources"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "skill_id",
+			"entityType": "columns",
+			"table": "skill_facts"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "fact_id",
+			"entityType": "columns",
+			"table": "skill_facts"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "skill_facts"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "skill_id",
+			"entityType": "columns",
+			"table": "skill_resources"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "resource_id",
+			"entityType": "columns",
+			"table": "skill_resources"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "snapshot_hash_at_link",
+			"entityType": "columns",
+			"table": "skill_resources"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "skill_resources"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "skill_id",
+			"entityType": "columns",
+			"table": "skill_skills"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "referenced_skill_id",
+			"entityType": "columns",
+			"table": "skill_skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "relation_type",
+			"entityType": "columns",
+			"table": "skill_skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "skill_skills"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "skill_id",
+			"entityType": "columns",
+			"table": "skill_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "tag_id",
+			"entityType": "columns",
+			"table": "skill_tags"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": true,
+			"default": null,
+			"generated": null,
+			"name": "id",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "name",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "title",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "'[auto-migrated] Needs description'",
+			"generated": null,
+			"name": "description",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "file_path",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "content_hash",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "0",
+			"generated": null,
+			"name": "retrieval_count",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "last_retrieved_at",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "0",
+			"generated": null,
+			"name": "needs_review",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "system_id",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "system_hash",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "execution_log_id",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "updated_at",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "deleted_at",
+			"entityType": "columns",
+			"table": "skills"
+		},
+		{
+			"type": "integer",
+			"notNull": false,
+			"autoincrement": true,
+			"default": null,
+			"generated": null,
+			"name": "id",
+			"entityType": "columns",
+			"table": "tags"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "name",
+			"entityType": "columns",
+			"table": "tags"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "description",
+			"entityType": "columns",
+			"table": "tags"
+		},
+		{
+			"type": "integer",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "0",
+			"generated": null,
+			"name": "usage_count",
+			"entityType": "columns",
+			"table": "tags"
+		},
+		{
+			"type": "text",
+			"notNull": false,
+			"autoincrement": false,
+			"default": null,
+			"generated": null,
+			"name": "system_id",
+			"entityType": "columns",
+			"table": "tags"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "created_at",
+			"entityType": "columns",
+			"table": "tags"
+		},
+		{
+			"type": "text",
+			"notNull": true,
+			"autoincrement": false,
+			"default": "(CURRENT_TIMESTAMP)",
+			"generated": null,
+			"name": "updated_at",
+			"entityType": "columns",
+			"table": "tags"
+		},
+		{
+			"columns": ["execution_log_id"],
+			"tableTo": "execution_logs",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_execution_log_tags_execution_log_id_execution_logs_id_fk",
+			"entityType": "fks",
+			"table": "execution_log_tags"
+		},
+		{
+			"columns": ["tag_id"],
+			"tableTo": "tags",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_execution_log_tags_tag_id_tags_id_fk",
+			"entityType": "fks",
+			"table": "execution_log_tags"
+		},
+		{
+			"columns": ["fact_id"],
+			"tableTo": "facts",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_fact_tags_fact_id_facts_id_fk",
+			"entityType": "fks",
+			"table": "fact_tags"
+		},
+		{
+			"columns": ["tag_id"],
+			"tableTo": "tags",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_fact_tags_tag_id_tags_id_fk",
+			"entityType": "fks",
+			"table": "fact_tags"
+		},
+		{
+			"columns": ["resource_id"],
+			"tableTo": "resources",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_resource_tags_resource_id_resources_id_fk",
+			"entityType": "fks",
+			"table": "resource_tags"
+		},
+		{
+			"columns": ["tag_id"],
+			"tableTo": "tags",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_resource_tags_tag_id_tags_id_fk",
+			"entityType": "fks",
+			"table": "resource_tags"
+		},
+		{
+			"columns": ["skill_id"],
+			"tableTo": "skills",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_facts_skill_id_skills_id_fk",
+			"entityType": "fks",
+			"table": "skill_facts"
+		},
+		{
+			"columns": ["fact_id"],
+			"tableTo": "facts",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_facts_fact_id_facts_id_fk",
+			"entityType": "fks",
+			"table": "skill_facts"
+		},
+		{
+			"columns": ["skill_id"],
+			"tableTo": "skills",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_resources_skill_id_skills_id_fk",
+			"entityType": "fks",
+			"table": "skill_resources"
+		},
+		{
+			"columns": ["resource_id"],
+			"tableTo": "resources",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_resources_resource_id_resources_id_fk",
+			"entityType": "fks",
+			"table": "skill_resources"
+		},
+		{
+			"columns": ["skill_id"],
+			"tableTo": "skills",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_skills_skill_id_skills_id_fk",
+			"entityType": "fks",
+			"table": "skill_skills"
+		},
+		{
+			"columns": ["referenced_skill_id"],
+			"tableTo": "skills",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_skills_referenced_skill_id_skills_id_fk",
+			"entityType": "fks",
+			"table": "skill_skills"
+		},
+		{
+			"columns": ["skill_id"],
+			"tableTo": "skills",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_tags_skill_id_skills_id_fk",
+			"entityType": "fks",
+			"table": "skill_tags"
+		},
+		{
+			"columns": ["tag_id"],
+			"tableTo": "tags",
+			"columnsTo": ["id"],
+			"onUpdate": "NO ACTION",
+			"onDelete": "CASCADE",
+			"nameExplicit": false,
+			"name": "fk_skill_tags_tag_id_tags_id_fk",
+			"entityType": "fks",
+			"table": "skill_tags"
+		},
+		{
+			"columns": ["execution_log_id", "tag_id"],
+			"nameExplicit": false,
+			"name": "execution_log_tags_pk",
+			"entityType": "pks",
+			"table": "execution_log_tags"
+		},
+		{
+			"columns": ["fact_id", "tag_id"],
+			"nameExplicit": false,
+			"name": "fact_tags_pk",
+			"entityType": "pks",
+			"table": "fact_tags"
+		},
+		{
+			"columns": ["resource_id", "tag_id"],
+			"nameExplicit": false,
+			"name": "resource_tags_pk",
+			"entityType": "pks",
+			"table": "resource_tags"
+		},
+		{
+			"columns": ["skill_id", "fact_id"],
+			"nameExplicit": false,
+			"name": "skill_facts_pk",
+			"entityType": "pks",
+			"table": "skill_facts"
+		},
+		{
+			"columns": ["skill_id", "resource_id"],
+			"nameExplicit": false,
+			"name": "skill_resources_pk",
+			"entityType": "pks",
+			"table": "skill_resources"
+		},
+		{
+			"columns": ["skill_id", "referenced_skill_id"],
+			"nameExplicit": false,
+			"name": "skill_skills_pk",
+			"entityType": "pks",
+			"table": "skill_skills"
+		},
+		{
+			"columns": ["skill_id", "tag_id"],
+			"nameExplicit": false,
+			"name": "skill_tags_pk",
+			"entityType": "pks",
+			"table": "skill_tags"
+		},
+		{
+			"columns": ["key"],
+			"nameExplicit": false,
+			"name": "config_pk",
+			"table": "config",
+			"entityType": "pks"
+		},
+		{
+			"columns": ["id"],
+			"nameExplicit": false,
+			"name": "execution_logs_pk",
+			"table": "execution_logs",
+			"entityType": "pks"
+		},
+		{
+			"columns": ["id"],
+			"nameExplicit": false,
+			"name": "facts_pk",
+			"table": "facts",
+			"entityType": "pks"
+		},
+		{
+			"columns": ["id"],
+			"nameExplicit": false,
+			"name": "resources_pk",
+			"table": "resources",
+			"entityType": "pks"
+		},
+		{
+			"columns": ["id"],
+			"nameExplicit": false,
+			"name": "skills_pk",
+			"table": "skills",
+			"entityType": "pks"
+		},
+		{
+			"columns": ["id"],
+			"nameExplicit": false,
+			"name": "tags_pk",
+			"table": "tags",
+			"entityType": "pks"
+		},
+		{
+			"columns": [
+				{
+					"value": "command",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_command_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
+					"value": "success",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_success_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
+					"value": "skill_name",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_skill_name_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
+					"value": "created_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "execution_logs_created_at_idx",
+			"entityType": "indexes",
+			"table": "execution_logs"
+		},
+		{
+			"columns": [
+				{
+					"value": "content",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "facts_content_idx",
+			"entityType": "indexes",
+			"table": "facts"
+		},
+		{
+			"columns": [
+				{
+					"value": "source_type",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "facts_source_type_idx",
+			"entityType": "indexes",
+			"table": "facts"
+		},
+		{
+			"columns": [
+				{
+					"value": "deleted_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "facts_deleted_at_idx",
+			"entityType": "indexes",
+			"table": "facts"
+		},
+		{
+			"columns": [
+				{
+					"value": "uri",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "resources_uri_idx",
+			"entityType": "indexes",
+			"table": "resources"
+		},
+		{
+			"columns": [
+				{
+					"value": "type",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "resources_type_idx",
+			"entityType": "indexes",
+			"table": "resources"
+		},
+		{
+			"columns": [
+				{
+					"value": "deleted_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "resources_deleted_at_idx",
+			"entityType": "indexes",
+			"table": "resources"
+		},
+		{
+			"columns": [
+				{
+					"value": "name",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "skills_name_idx",
+			"entityType": "indexes",
+			"table": "skills"
+		},
+		{
+			"columns": [
+				{
+					"value": "deleted_at",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "skills_deleted_at_idx",
+			"entityType": "indexes",
+			"table": "skills"
+		},
+		{
+			"columns": [
+				{
+					"value": "execution_log_id",
+					"isExpression": false
+				}
+			],
+			"isUnique": false,
+			"where": null,
+			"origin": "manual",
+			"name": "skills_execution_log_id_idx",
+			"entityType": "indexes",
+			"table": "skills"
+		},
+		{
+			"columns": ["system_id"],
+			"nameExplicit": false,
+			"name": "facts_system_id_unique",
+			"entityType": "uniques",
+			"table": "facts"
+		},
+		{
+			"columns": ["system_id"],
+			"nameExplicit": false,
+			"name": "resources_system_id_unique",
+			"entityType": "uniques",
+			"table": "resources"
+		},
+		{
+			"columns": ["system_id"],
+			"nameExplicit": false,
+			"name": "skills_system_id_unique",
+			"entityType": "uniques",
+			"table": "skills"
+		},
+		{
+			"columns": ["name"],
+			"nameExplicit": false,
+			"name": "tags_name_unique",
+			"entityType": "uniques",
+			"table": "tags"
+		},
+		{
+			"columns": ["system_id"],
+			"nameExplicit": false,
+			"name": "tags_system_id_unique",
+			"entityType": "uniques",
+			"table": "tags"
+		}
+	],
+	"renames": []
+}

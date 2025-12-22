@@ -35,6 +35,7 @@ export interface MaintenanceReportResult {
 		skills: number;
 		facts: number;
 		pendingReview: number;
+		incompleteDescriptions: number;
 	};
 }
 
@@ -123,9 +124,32 @@ export async function generateKnowledgeContext(
 			maxAgeHours: 168, // 7 days
 		});
 
-		if (staleness.summary.totalStale > 0) {
+		const hasWarnings =
+			staleness.summary.totalStale > 0 ||
+			staleness.approachingStaleResources.length > 0;
+
+		if (hasWarnings) {
 			hasStalenessWarnings = true;
 			sections.push("## Staleness Warnings\n");
+
+			// Show approaching stale first (these are early warnings)
+			if (staleness.approachingStaleResources.length > 0) {
+				sections.push(
+					`### Approaching Stale (${staleness.approachingStaleResources.length})`,
+				);
+				sections.push("These resources will become stale soon:");
+				for (const r of staleness.approachingStaleResources.slice(0, 5)) {
+					sections.push(
+						`- ${r.uri} (${r.percentToStale}% to stale, ~${Math.round(r.hoursUntilStale)}h remaining)`,
+					);
+				}
+				if (staleness.approachingStaleResources.length > 5) {
+					sections.push(
+						`  ... and ${staleness.approachingStaleResources.length - 5} more`,
+					);
+				}
+				sections.push("");
+			}
 
 			if (staleness.staleResources.length > 0) {
 				sections.push(
@@ -267,6 +291,9 @@ export async function generateMaintenanceReport(
 	sections.push(`- Skills: ${result.summary.skills}`);
 	sections.push(`- Unverified Facts: ${result.summary.facts}`);
 	sections.push(`- Skills Pending Review: ${result.summary.pendingReview}`);
+	sections.push(
+		`- Incomplete Descriptions: ${result.summary.incompleteDescriptions}`,
+	);
 	sections.push("");
 
 	if (result.staleResources.length > 0) {
@@ -335,6 +362,44 @@ export async function generateMaintenanceReport(
 			sections.push(
 				"- Action: Review content, add tags and description via `update_skill`",
 			);
+			sections.push("");
+		}
+	}
+
+	if (result.incompleteDescriptions.length > 0) {
+		sections.push("## Incomplete Descriptions\n");
+		sections.push(
+			"These items have auto-generated placeholder descriptions that should be replaced with meaningful content:\n",
+		);
+
+		const resourceDescs = result.incompleteDescriptions.filter(
+			(d) => d.type === "resource",
+		);
+		const skillDescs = result.incompleteDescriptions.filter(
+			(d) => d.type === "skill",
+		);
+
+		if (resourceDescs.length > 0) {
+			sections.push(`### Resources (${resourceDescs.length})`);
+			for (const item of resourceDescs) {
+				sections.push(`- **${item.name}** (id: ${item.id})`);
+				sections.push(`  - Current: \`${item.description}\``);
+				sections.push(
+					"  - Action: Use `update_resource` to add a proper description",
+				);
+			}
+			sections.push("");
+		}
+
+		if (skillDescs.length > 0) {
+			sections.push(`### Skills (${skillDescs.length})`);
+			for (const item of skillDescs) {
+				sections.push(`- **${item.name}** (id: ${item.id})`);
+				sections.push(`  - Current: \`${item.description}\``);
+				sections.push(
+					"  - Action: Use `update_skill` to add a proper description",
+				);
+			}
 			sections.push("");
 		}
 	}
