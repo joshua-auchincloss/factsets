@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { unlink, access, stat } from "node:fs/promises";
 import semver from "semver";
 import packageJson from "../../package.json" with { type: "json" };
@@ -61,48 +60,63 @@ export interface VersionInfo {
 }
 
 /**
- * Get all release tags from the git repository, sorted by semantic version.
+ * GitHub API base URL for factsets releases
+ */
+const GITHUB_API_URL =
+	"https://api.github.com/repos/joshua-auchincloss/factsets";
+
+const TAGS: string[] = []
+
+/**
+ * Fetch release tags from GitHub API.
  * Returns tags in ascending order (oldest first).
  * Filters out versions below MIN_TEST_VERSION.
  */
-export function getReleaseTags(): string[] {
+export async function getReleaseTags(): Promise<string[]> {
+	if (TAGS.length > 0) {
+		return TAGS;
+	}
 	try {
-		const output = execSync("git tag --list 'v*' --sort=version:refname", {
-			encoding: "utf-8",
-			cwd: process.cwd(),
+		const response = await fetch(`${GITHUB_API_URL}/tags`, {
+			headers: {
+				Accept: "application/vnd.github.v3+json",
+				"User-Agent": "factsets-migration-tests",
+			},
 		});
-		return output
-			.split("\n")
-			.map((tag) => tag.trim())
+
+		if (!response.ok) {
+			console.warn(`GitHub API returned ${response.status}`);
+			return [];
+		}
+
+		const tags = (await response.json()) as Array<{ name: string }>;
+		const versionTags = tags
+			.map((t) => t.name)
 			.filter((tag) => {
-				if (!tag.length || !/^v\d+\.\d+\.\d+/.test(tag)) return false;
+				if (!/^v\d+\.\d+\.\d+/.test(tag)) return false;
 				const version = tag.replace(/^v/, "");
 				return semver.gte(version, MIN_TEST_VERSION);
 			});
+
+		// Sort by semver ascending (oldest first)
+		TAGS.push(...versionTags.sort((a, b) =>
+			semver.compare(a.replace(/^v/, ""), b.replace(/^v/, "")),
+		));
+		return TAGS;
 	} catch (error) {
-		console.warn("Failed to get git tags:", error);
+		console.warn("Failed to fetch tags from GitHub API:", error);
 		return [];
 	}
 }
 
 /**
- * Get all published npm versions, sorted by semantic version.
+ * Get all published versions from GitHub tags, sorted by semantic version.
+ * CI enforces that all tags have corresponding releases on GitHub and npm.
  * Filters out versions below MIN_TEST_VERSION.
  */
 export async function getPublishedVersions(): Promise<string[]> {
-	try {
-		const output = execSync("npm view factsets versions --json", {
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "ignore"],
-		});
-		const versions = JSON.parse(output) as string[];
-		return sortVersions(versions).filter((v) =>
-			semver.gte(v, MIN_TEST_VERSION),
-		);
-	} catch {
-		// Fall back to git tags
-		return getReleaseTags().map((tag) => tag.replace(/^v/, ""));
-	}
+	const tags = await getReleaseTags();
+	return tags.map((tag) => tag.replace(/^v/, ""));
 }
 
 /**
@@ -135,18 +149,13 @@ export function tagToVersion(tag: string): string {
 }
 
 /**
- * Check if a version exists on npm (can be installed via bunx)
+ * Check if a version exists as a GitHub tag.
+ * CI enforces that all tags have corresponding releases.
  */
 export async function isVersionPublished(version: string): Promise<boolean> {
-	try {
-		execSync(`npm view factsets@${version} version`, {
-			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "ignore"],
-		});
-		return true;
-	} catch {
-		return false;
-	}
+	const tags = await getReleaseTags();
+	const tag = versionToTag(version);
+	return tags.includes(tag);
 }
 
 /**
@@ -166,7 +175,7 @@ export async function getVersionInfo(version: string): Promise<VersionInfo> {
  * Get all versions with their info
  */
 export async function getAllVersionsInfo(): Promise<VersionInfo[]> {
-	const tags = getReleaseTags();
+	const tags = await getReleaseTags();
 	const versions = tags.map((tag) => tagToVersion(tag));
 
 	// Add current version if not in tags

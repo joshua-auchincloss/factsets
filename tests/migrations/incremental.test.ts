@@ -65,8 +65,8 @@ describe("incremental migrations", () => {
 	});
 
 	describe("release tag discovery", () => {
-		it("should discover git release tags", () => {
-			const tags = getReleaseTags();
+		it("should discover git release tags", async () => {
+			const tags = await getReleaseTags();
 			expect(Array.isArray(tags)).toBe(true);
 			// Tags should be in ascending version order
 			for (let i = 1; i < tags.length; i++) {
@@ -258,27 +258,34 @@ describe("incremental migrations", () => {
 			await testDb.cleanup();
 		});
 
-		it.each(
-			getReleaseTags().map((tag) => tag.replace(/^v/, "")),
-		)("should successfully run migrations for version %s", async (version) => {
-			// Check if version is published
-			if (!(await isVersionPublished(version))) {
-				console.log(`Version ${version} not published, skipping`);
-				return;
-			}
+		it("should successfully run migrations for each version", async () => {
+			const tags = await getReleaseTags();
+			const versions = tags.map((tag) => tag.replace(/^v/, ""));
 
-			const { command, args } = createVersionArgs(version, testDb.path);
-			let server: TestServer | null = null;
-			try {
-				server = await createTestServer({ command, args });
+			for (const version of versions) {
+				// Check if version is published
+				if (!(await isVersionPublished(version))) {
+					console.log(`Version ${version} not published, skipping`);
+					continue;
+				}
 
-				// Basic health check
-				const result = await server.callTool("search_facts", { limit: 1 });
-				expect(result.isError).toBeFalsy();
-			} finally {
-				await closeServer(server);
+				const { command, args } = createVersionArgs(version, testDb.path);
+				let server: TestServer | null = null;
+				try {
+					server = await createTestServer({ command, args });
+
+					// Basic health check
+					const result = await server.callTool("search_facts", { limit: 1 });
+					expect(result.isError).toBeFalsy();
+					console.log(`✓ Version ${version} migrations successful`);
+				} finally {
+					await closeServer(server);
+				}
+
+				// Clean up for next version
+				await testDb.cleanup();
 			}
-		}, 60000); // 60 second timeout per version (increased for Windows)
+		}, 300000); // 5 minute timeout for all versions
 	});
 
 	describe("version upgrade paths", () => {
