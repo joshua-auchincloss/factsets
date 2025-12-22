@@ -244,22 +244,24 @@ Design principle: Tools should be bulk-friendly - submitting 10 facts should be 
 
 Factsets is designed for headless, continuous operation. Key characteristics:
 
-| Characteristic | Value |
-| -------------- | ----- |
-| Cost | Free - no API costs, rate limits, or usage quotas |
-| Performance | Battle tested for production workloads |
-| Capacity | Cannot be overwhelmed by any single agent session |
-| Reliability | Self-maintaining with automatic staleness detection |
+| Characteristic | Value                                               |
+| -------------- | --------------------------------------------------- |
+| Cost           | Free - no API costs, rate limits, or usage quotas   |
+| Performance    | Battle tested for production workloads              |
+| Capacity       | Cannot be overwhelmed by any single agent session   |
+| Reliability    | Self-maintaining with automatic staleness detection |
 
 Agents should use Factsets tools on every prompt, not just at session boundaries. The system is free and can handle continuous queries without degradation. There is no reason to conserve usage.
 
 Good usage patterns:
+
 - Search facts before answering any question
 - Update facts immediately when information changes
 - Log commands as they execute successfully
 - Capture knowledge the moment it is discovered
 
 Bad usage patterns:
+
 - Only checking facts at session start
 - Waiting for user to request knowledge capture
 - Batching fact updates at end of session
