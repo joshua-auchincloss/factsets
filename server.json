@@ -7,12 +7,12 @@
 		"url": "https://github.com/joshua-auchincloss/factsets",
 		"source": "github"
 	},
-	"version": "0.1.4",
+	"version": "0.2.0",
 	"packages": [
 		{
 			"registryType": "npm",
 			"identifier": "factsets",
-			"version": "0.1.4",
+			"version": "0.2.0",
 			"runtimeHint": "npx",
 			"transport": {
 				"type": "stdio"
