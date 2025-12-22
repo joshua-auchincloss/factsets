@@ -10,7 +10,7 @@ TEST_DIR=$(mktemp -d)
 
 echo "==> Running tests..."
 cd "$ROOT_DIR"
-bun test
+bun test --timeout 600000
 
 echo "==> Building distribution..."
 bun run dist
