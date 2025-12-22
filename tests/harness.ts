@@ -42,18 +42,15 @@ export async function createTestServer(overrides?: TestServerOptions) {
 				"sqlite://:memory:",
 				"--no-watch-skills",
 			],
-
 		}),
 	);
 
 	return {
 		client,
 		callTool: async (name: string, params?: Record<string, any>) => {
-			return await client.callTool(
-				{ name, arguments: params },
-				undefined,
-				{ timeout: requestTimeout },
-			);
+			return await client.callTool({ name, arguments: params }, undefined, {
+				timeout: requestTimeout,
+			});
 		},
 		getPrompt: async (name: string, params?: Record<string, any>) => {
 			return await client.getPrompt(
