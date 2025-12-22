@@ -11,6 +11,84 @@ export function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const MAX_RETRIES = 3;
+const DEFAULT_RETRY_DELAY_MS = 5000;
+
+/**
+ * Get retry delay from rate limit headers (in ms), or default
+ */
+function getRetryDelayMs(error: unknown): number {
+	if (!axios.isAxiosError(error)) return DEFAULT_RETRY_DELAY_MS;
+
+	const headers = error.response?.headers;
+	if (!headers) return DEFAULT_RETRY_DELAY_MS;
+
+	// Check Retry-After header
+	const retryAfter = headers["retry-after"];
+	if (retryAfter) {
+		const seconds = Number.parseInt(retryAfter, 10);
+		if (!Number.isNaN(seconds)) {
+			return seconds * 1000;
+		}
+	}
+
+	// Check GitHub's x-ratelimit-reset header (Unix timestamp)
+	const resetTimestamp = headers["x-ratelimit-reset"];
+	if (resetTimestamp) {
+		const resetTime = Number.parseInt(resetTimestamp, 10) * 1000;
+		const waitTime = resetTime - Date.now();
+		if (waitTime > 0) {
+			return Math.min(waitTime, 60000); // Cap at 60s
+		}
+	}
+
+	return DEFAULT_RETRY_DELAY_MS;
+}
+
+/**
+ * Fetch with retry for rate limits
+ */
+async function fetchWithRetry<T>(url: string): Promise<T | null> {
+	for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+		try {
+			const response = await axios.get<T>(url, {
+				headers: {
+					Accept: "application/vnd.github.v3+json",
+					"User-Agent": "factsets-migration-tests",
+				},
+				timeout: 30000,
+			});
+
+			if (response.status === 200) {
+				return response.data;
+			}
+
+			console.warn(`GitHub API returned ${response.status}`);
+			return null;
+		} catch (error) {
+			const status = axios.isAxiosError(error) ? error.response?.status : null;
+			const isRateLimit = status === 403 || status === 429;
+
+			// Don't retry client errors (except rate limits)
+			if (status && status >= 400 && status < 500 && !isRateLimit) {
+				console.warn(`GitHub API error ${status}`);
+				return null;
+			}
+
+			if (attempt < MAX_RETRIES - 1) {
+				const delayMs = getRetryDelayMs(error);
+				console.warn(
+					`GitHub API ${isRateLimit ? "rate limited" : "error"}, waiting ${Math.round(delayMs / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES})`,
+				);
+				await sleep(delayMs);
+			}
+		}
+	}
+
+	console.error(`Failed to fetch ${url} after ${MAX_RETRIES} attempts`);
+	return null;
+}
+
 /**
  * Try to delete a file with retries for Windows file locking issues
  */
@@ -76,43 +154,31 @@ export async function getReleaseTags(): Promise<string[]> {
 	if (TAGS.length > 0) {
 		return TAGS;
 	}
-	for (let attempt = 1; attempt < 3; attempt++) {
-		try {
-			const response = await axios.get(`${GITHUB_API_URL}/tags`, {
-				headers: {
-					Accept: "application/vnd.github.v3+json",
-					"User-Agent": "factsets-migration-tests",
-				},
-				timeout: 30000,
-			});
 
-			if (!response.status || response.status !== 200) {
-				console.warn(`GitHub API returned ${response.status}`);
-				return [];
-			}
+	const data = await fetchWithRetry<Array<{ name: string }>>(
+		`${GITHUB_API_URL}/tags`,
+	);
 
-			const tags = response.data as Array<{ name: string }>;
-			const versionTags = tags
-				.map((t) => t.name)
-				.filter((tag) => {
-					if (!/^v\d+\.\d+\.\d+/.test(tag)) return false;
-					const version = tag.replace(/^v/, "");
-					return semver.gte(version, MIN_TEST_VERSION);
-				});
-
-			// Sort by semver ascending (oldest first)
-			TAGS.push(
-				...versionTags.sort((a, b) =>
-					semver.compare(a.replace(/^v/, ""), b.replace(/^v/, "")),
-				),
-			);
-			return TAGS;
-		} catch (error) {
-			console.warn("Failed to fetch tags from GitHub API:", error);
-			await sleep(attempt * 500); // Exponential backoff
-		}
+	if (!data) {
+		console.warn("Failed to fetch tags from GitHub API after all retries");
+		return [];
 	}
-	return [];
+
+	const versionTags = data
+		.map((t) => t.name)
+		.filter((tag) => {
+			if (!/^v\d+\.\d+\.\d+/.test(tag)) return false;
+			const version = tag.replace(/^v/, "");
+			return semver.gte(version, MIN_TEST_VERSION);
+		});
+
+	// Sort by semver ascending (oldest first)
+	TAGS.push(
+		...versionTags.sort((a, b) =>
+			semver.compare(a.replace(/^v/, ""), b.replace(/^v/, "")),
+		),
+	);
+	return TAGS;
 }
 
 /**
