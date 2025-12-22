@@ -56,7 +56,7 @@ async function fetchWithRetry<T>(url: string): Promise<T | null> {
 					Accept: "application/vnd.github.v3+json",
 					"User-Agent": "factsets-migration-tests",
 				},
-				timeout: 30000,
+				timeout: 60000,
 			});
 
 			if (response.status === 200) {

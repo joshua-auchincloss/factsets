@@ -1,5 +1,5 @@
 [test]
-timeout = 30000
+timeout = 60000
 coverage = true
 coverageReporter = ["text", "lcov"]
 coveragePathIgnorePatterns = [

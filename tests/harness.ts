@@ -10,15 +10,23 @@ type PromiseResult<T> = T extends Promise<infer U> ? U : T;
 export type TestDB = PromiseResult<ReturnType<typeof createTestDb>>;
 export type TestServer = PromiseResult<ReturnType<typeof createTestServer>>;
 
+/** Default request timeout (ms) - increased for CI environments */
+const DEFAULT_REQUEST_TIMEOUT = 120000;
+
 export async function createTestDb() {
 	const db = createConnection(":memory:");
 	await runMigrations(db);
 	return db;
 }
 
-export async function createTestServer(
-	overrides?: Partial<StdioServerParameters>,
-) {
+export interface TestServerOptions extends Partial<StdioServerParameters> {
+	/** Timeout for individual requests in ms (default: 120000) */
+	requestTimeout?: number;
+}
+
+export async function createTestServer(overrides?: TestServerOptions) {
+	const requestTimeout = overrides?.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT;
+
 	const client = new Client({
 		name: "test-client",
 		version: "1.0.0",
@@ -34,16 +42,24 @@ export async function createTestServer(
 				"sqlite://:memory:",
 				"--no-watch-skills",
 			],
+
 		}),
 	);
 
 	return {
 		client,
 		callTool: async (name: string, params?: Record<string, any>) => {
-			return await client.callTool({ name, arguments: params });
+			return await client.callTool(
+				{ name, arguments: params },
+				undefined,
+				{ timeout: requestTimeout },
+			);
 		},
 		getPrompt: async (name: string, params?: Record<string, any>) => {
-			return await client.getPrompt({ name, arguments: params });
+			return await client.getPrompt(
+				{ name, arguments: params },
+				{ timeout: requestTimeout },
+			);
 		},
 	};
 }

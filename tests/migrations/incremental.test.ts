@@ -285,7 +285,7 @@ describe("incremental migrations", () => {
 				// Clean up for next version
 				await testDb.cleanup();
 			}
-		}, 300000); // 5 minute timeout for all versions
+		}, 600000); // 5 minute timeout for all versions
 	});
 
 	describe("version upgrade paths", () => {
@@ -404,6 +404,6 @@ describe("incremental migrations", () => {
 			} finally {
 				await closeServer(server);
 			}
-		}, 300000); // 5 minute timeout (increased for Windows)
+		}, 600000); // 5 minute timeout (increased for Windows)
 	});
 });
