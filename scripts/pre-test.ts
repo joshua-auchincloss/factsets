@@ -33,6 +33,39 @@ const DEFAULT_RETRY_DELAY_MS = 5000;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 /**
+ * Check if we're running in the release workflow (triggered by tag push).
+ * The release workflow is the only one that runs on refs/tags/*.
+ */
+function isReleaseWorkflow(): boolean {
+	const githubRef = process.env.GITHUB_REF;
+	return !!githubRef && githubRef.startsWith("refs/tags/");
+}
+
+/**
+ * Check if a version exists on npm registry.
+ * Returns true if the version is published, false otherwise.
+ */
+async function checkNpmVersionExists(version: string): Promise<boolean> {
+	try {
+		const response = await axios.get(
+			`https://registry.npmjs.org/factsets/${version}`,
+			{
+				timeout: 10000,
+				validateStatus: (status) => status === 200 || status === 404,
+			},
+		);
+		return response.status === 200;
+	} catch (error) {
+		console.warn(
+			`[pre-test] Failed to check npm for version ${version}:`,
+			error instanceof Error ? error.message : String(error),
+		);
+		// If we can't check, assume it exists to avoid breaking tests
+		return true;
+	}
+}
+
+/**
  * Build headers for GitHub API requests.
  * Includes authentication if GITHUB_TOKEN is available.
  */
@@ -181,25 +214,61 @@ async function main(): Promise<void> {
 	console.log("[pre-test] Starting dependency pre-hydration...");
 	console.log(`[pre-test] Minimum version: ${MIN_TEST_VERSION}`);
 
+	const inReleaseWorkflow = isReleaseWorkflow();
+	if (inReleaseWorkflow) {
+		console.log(
+			"[pre-test] Running in release workflow (refs/tags) - will check npm availability",
+		);
+	}
+
 	const versions = await getPublishedVersions();
 
 	if (versions.length === 0) {
 		throw new Error("No published versions found - cannot proceed");
 	}
 
-	// Write manifest first so tests have version info even if pre-install fails
+	// Check if the latest version is published to npm yet
+	// During release: tag exists but package not published until tests pass
+	let versionsToInstall = versions;
+	const latestVersion = versions[versions.length - 1];
+
+	if (latestVersion) {
+		const exists = await checkNpmVersionExists(latestVersion);
+		if (!exists) {
+			console.warn(
+				`[pre-test] Latest version ${latestVersion} not yet published to npm - skipping pre-install`,
+			);
+			if (inReleaseWorkflow) {
+				console.log(
+					"[pre-test] This is expected during release workflow (package publishes after tests pass)",
+				);
+			}
+			versionsToInstall = versions.slice(0, -1);
+		}
+	}
+
+	// Write manifest with ALL versions (including unpublished) so tests know about them
 	await writeVersionsManifest(versions);
 
-	console.log(`[pre-test] Found ${versions.length} versions to pre-install:`);
-	console.log(`[pre-test] Versions: ${versions.join(", ")}`);
+	if (versionsToInstall.length === 0) {
+		console.log(
+			"[pre-test] No versions available for pre-install (skipping hydration)",
+		);
+		return;
+	}
+
+	console.log(
+		`[pre-test] Found ${versionsToInstall.length} versions to pre-install:`,
+	);
+	console.log(`[pre-test] Versions: ${versionsToInstall.join(", ")}`);
 
 	// Pre-install versions sequentially to fail fast on errors
-	for (const version of versions) {
+	for (const version of versionsToInstall) {
 		await preInstallVersion(version);
 	}
 
 	console.log(
-		`[pre-test] Pre-hydration complete: ${versions.length} versions cached`,
+		`[pre-test] Pre-hydration complete: ${versionsToInstall.length} versions cached`,
 	);
 }
 
