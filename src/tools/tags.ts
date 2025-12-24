@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	listTags,
@@ -17,8 +16,9 @@ import {
 	tagPruneOrphansOutput,
 } from "../schemas/tags.js";
 import { registerDbTool } from "./utils.js";
+import type { McpServerCompat } from "../types.js";
 
-export function registerTagTools(server: McpServer, db: DB) {
+export function registerTagTools(server: McpServerCompat, db: DB) {
 	registerDbTool(server, db, {
 		name: "list_tags",
 		title: "List Tags",

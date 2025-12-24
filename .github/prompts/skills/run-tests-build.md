@@ -5,6 +5,7 @@ description: "Commands and patterns for running Factsets tests and builds, inclu
 tags: ["factsets", "testing", "build", "commands"]
 updated: 2025-12-21
 ---
+
 # Running Factsets Tests and Build
 
 ## Quick Commands
@@ -65,6 +66,7 @@ bun test --verbose
 ## CI/CD
 
 Tests run automatically on:
+
 - Pull requests via GitHub Actions
 - Push to main branch
 - Release workflow

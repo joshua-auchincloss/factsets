@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	getConfig,
@@ -15,6 +14,7 @@ import { mkdir, readdir, rm } from "node:fs/promises";
 import { join, basename } from "node:path";
 import { eq } from "drizzle-orm";
 import { fileExists, readTextFile, writeTextFile } from "../utils/fs.js";
+import type { McpServerCompat } from "../types.js";
 
 const getConfigInput = z.object({
 	key: z.string().min(1),
@@ -89,7 +89,7 @@ async function migrateSkillsDir(
 	return { moved, errors };
 }
 
-export function registerConfigTools(server: McpServer, db: DB) {
+export function registerConfigTools(server: McpServerCompat, db: DB) {
 	server.registerTool(
 		"get_config",
 		{

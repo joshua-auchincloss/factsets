@@ -2,9 +2,18 @@
 name: troubleshooting-common-issues
 title: "Troubleshooting Common Issues"
 description: "Solutions for common issues encountered when developing and deploying Factsets, including Drizzle migration ordering, CI/CD failures, and MCP transport problems."
-tags: ["factsets", "debugging", "troubleshooting", "drizzle", "ci-cd", "best-practices"]
+tags:
+  [
+    "factsets",
+    "debugging",
+    "troubleshooting",
+    "drizzle",
+    "ci-cd",
+    "best-practices",
+  ]
 updated: 2025-12-22
 ---
+
 # Troubleshooting Common Issues
 
 ## Drizzle Migration Ordering (Linux/CI)
@@ -98,10 +107,14 @@ const client = new Client({ name: "test", version: "1.0.0" });
 await client.connect(
   new StdioClientTransport({
     command: "bun",
-    args: ["src/main.ts", "mcp-server",
-           "--database-url", "sqlite://:memory:",
-           "--no-watch-skills"]  // Disable file watcher
-  })
+    args: [
+      "src/main.ts",
+      "mcp-server",
+      "--database-url",
+      "sqlite://:memory:",
+      "--no-watch-skills",
+    ], // Disable file watcher
+  }),
 );
 ```
 
@@ -203,6 +216,7 @@ Tag expansion disabled or not configured.
 ### Solution
 
 1. Verify expansion is enabled:
+
    ```
    get_config key="tag_expansion_search_facts"  // Should be true
    ```

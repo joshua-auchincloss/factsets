@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	knowledgeContextInput,
@@ -13,6 +12,7 @@ import {
 	generateRefreshGuide,
 } from "../prompts/generators.js";
 import { z } from "zod";
+import type { McpServerCompat } from "../types.js";
 
 // Output schemas for prompt tools - match what the generators actually return
 const knowledgeContextOutput = z.object({
@@ -52,7 +52,7 @@ const refreshGuideOutput = z.object({
  * Register prompt tools - these are tool versions of the prompts
  * that allow agents to programmatically invoke them and get structured output.
  */
-export function registerPromptTools(server: McpServer, db: DB) {
+export function registerPromptTools(server: McpServerCompat, db: DB) {
 	server.registerTool(
 		"get_knowledge_context",
 		{

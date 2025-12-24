@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import { getAllConfig, setConfig, getConfig } from "../db/operations/config.js";
 import {
@@ -7,6 +6,7 @@ import {
 } from "../runtime/defaults.js";
 import type { UserPreferencesConfig } from "../runtime/types.js";
 import { z } from "zod";
+import type { McpServerCompat } from "../types.js";
 
 function getPreferenceKeys(): string[] {
 	return Object.entries(CONFIG_SCHEMA)
@@ -21,12 +21,6 @@ function configKeyToField(key: string): string {
 	return key
 		.replace(/^pref_/, "")
 		.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-}
-
-function fieldToConfigKey(field: string): string {
-	return (
-		"pref_" + field.replace(/([A-Z])/g, (letter) => `_${letter.toLowerCase()}`)
-	);
 }
 
 async function getCurrentPreferences(db: DB): Promise<UserPreferencesConfig> {
@@ -382,7 +376,7 @@ const resetPreferencesInput = z.object({
 		.describe("Specific preference keys to reset, or omit for all"),
 });
 
-export function registerPreferencesTools(server: McpServer, db: DB) {
+export function registerPreferencesTools(server: McpServerCompat, db: DB) {
 	/**
 	 * Get all user preferences as structured data
 	 */

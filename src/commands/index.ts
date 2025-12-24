@@ -3,11 +3,13 @@ import { mcpServerHandler } from "./mcp-server.js";
 import { dumpHandler, restoreHandler } from "./dump.js";
 import { watchFilesHandler } from "./watch-files.js";
 import { workerHandler } from "./worker.js";
+import { capabilitiesHandler } from "./capabilities-cmd.js";
 import type { CommandRegistry } from "./types.js";
 
 const handlers: CommandRegistry = {
 	"mcp-server": mcpServerHandler,
 	"watch-files": watchFilesHandler,
+	capabilities: capabilitiesHandler,
 	dump: dumpHandler,
 	restore: restoreHandler,
 	worker: workerHandler,
@@ -21,6 +23,9 @@ export async function dispatch(config: AppConfig): Promise<void> {
 			break;
 		case "watch-files":
 			await handlers["watch-files"](command);
+			break;
+		case "capabilities":
+			await handlers["capabilities"](command);
 			break;
 		case "dump":
 			await handlers["dump"](command);

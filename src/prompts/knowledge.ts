@@ -1,7 +1,7 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import { z } from "zod";
 import { generateKnowledgeContext, generateRecallSkill } from "./generators.js";
+import type { McpServerCompat } from "../types.js";
 
 const knowledgeContextArgs = {
 	tags: z
@@ -37,7 +37,7 @@ const recallSkillArgs = {
 		),
 };
 
-export function registerKnowledgePrompts(server: McpServer, db: DB) {
+export function registerKnowledgePrompts(server: McpServerCompat, db: DB) {
 	server.registerPrompt(
 		"knowledge_context",
 		{

@@ -5,6 +5,7 @@ description: "Guide to writing and running tests for factsets"
 tags: ["testing", "factsets", "best-practices"]
 updated: 2025-12-20
 ---
+
 # Testing Factsets
 
 ## Overview
@@ -42,14 +43,21 @@ export async function createTestServer() {
   await client.connect(
     new StdioClientTransport({
       command: "bun",
-      args: ["src/main.ts", "mcp-server", "--database-url", "sqlite://:memory:"]
+      args: [
+        "src/main.ts",
+        "mcp-server",
+        "--database-url",
+        "sqlite://:memory:",
+      ],
     }),
   );
 
   return {
     client,
-    callTool: async (name, params) => client.callTool({ name, arguments: params }),
-    getPrompt: async (name, params) => client.getPrompt({ name, arguments: params }),
+    callTool: async (name, params) =>
+      client.callTool({ name, arguments: params }),
+    getPrompt: async (name, params) =>
+      client.getPrompt({ name, arguments: params }),
   };
 }
 ```

@@ -5,6 +5,7 @@ description: "How staleness detection and refresh cycles work"
 tags: ["staleness", "maintenance", "factsets"]
 updated: 2025-12-20
 ---
+
 # Managing Staleness in Factsets
 
 ## Overview
@@ -32,7 +33,7 @@ const result = await checkStale(db, {
   maxAgeHours: 168,
   checkResources: true,
   checkSkills: true,
-  checkFacts: true
+  checkFacts: true,
 });
 ```
 

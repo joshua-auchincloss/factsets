@@ -1,10 +1,10 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type {
 	CallToolResult,
 	ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { DB } from "../db/index.js";
 import type { z } from "zod";
+import type { McpServerCompat } from "../types.js";
 
 /**
  * Options for registering a database-backed tool.
@@ -59,7 +59,7 @@ export const registerDbTool = <
 	TInput extends z.ZodTypeAny,
 	TOutput extends z.ZodTypeAny,
 >(
-	server: McpServer,
+	server: McpServerCompat,
 	db: DB,
 	options: RegisterDbToolOptions<TInput, TOutput>,
 ) => {

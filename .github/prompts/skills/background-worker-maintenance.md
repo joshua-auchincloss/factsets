@@ -5,6 +5,7 @@ description: "Guide to the Factsets background worker for automated maintenance 
 tags: ["factsets", "background-worker", "maintenance", "automation"]
 updated: 2025-12-21
 ---
+
 # Background Worker for Automated Maintenance
 
 ## Overview
@@ -28,6 +29,7 @@ bunx factsets mcp-server --background-worker
 **Interval:** `worker_interval_staleness_check` (default 1 hour)
 
 Scans all resources and identifies:
+
 - **Stale resources** - Exceeded freshness threshold
 - **Approaching stale** - Past warning threshold (default 80% of limit)
 - **Skills with stale deps** - Skills referencing stale resources
@@ -39,6 +41,7 @@ Results logged but no automatic action taken - agents handle refresh.
 **Interval:** `worker_interval_orphan_prune` (default 24 hours)
 
 Removes tags with zero usage across all junction tables:
+
 - `factTags`
 - `resourceTags`
 - `skillTags`
@@ -65,21 +68,23 @@ CREATE TABLE worker_state (
 ```
 
 State keys tracked:
+
 - `last_staleness_check` - Timestamp of last staleness scan
 - `last_orphan_prune` - Timestamp of last tag cleanup
 - `last_unverified_cleanup` - Timestamp of last fact review
 
 This enables:
+
 - Resume from last known state after restart
 - Prevent duplicate work if restarted frequently
 - Track maintenance history
 
 ## Configuration
 
-| Config Key | Default (ms) | Description |
-|-----------|-------------|-------------|
-| `worker_interval_staleness_check` | 3600000 (1h) | Staleness scan interval |
-| `worker_interval_orphan_prune` | 86400000 (24h) | Orphan cleanup interval |
+| Config Key                           | Default (ms)    | Description                |
+| ------------------------------------ | --------------- | -------------------------- |
+| `worker_interval_staleness_check`    | 3600000 (1h)    | Staleness scan interval    |
+| `worker_interval_orphan_prune`       | 86400000 (24h)  | Orphan cleanup interval    |
 | `worker_interval_unverified_cleanup` | 604800000 (1wk) | Unverified review interval |
 
 Adjust via `set_config`:

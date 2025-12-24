@@ -37,9 +37,9 @@ Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, et
   "mcpServers": {
     "factsets": {
       "command": "bunx",
-      "args": ["factsets"],
-    },
-  },
+      "args": ["factsets", "mcp-server"]
+    }
+  }
 }
 ```
 
@@ -57,11 +57,12 @@ bunx factsets mcp-server
 
 After adding Factsets to your MCP client, run the setup prompt to integrate it into your project:
 
-**In a supported IDE**: Type `/setup` in the chat to run the guided setup
+**In a supported IDE**: Type `/mcp.factsets.setup` in the chat to run the guided setup
 
 **In other clients**: Call the `get_setup_guide` tool or use the `setup` prompt
 
 The setup guide will:
+
 - Analyze your project structure and establish baseline facts
 - Configure the skills directory for your AI client
 - Create or update `AGENTS.md` with Factsets instructions

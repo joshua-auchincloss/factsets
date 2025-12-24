@@ -1,7 +1,7 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { readFileSync } from "fs";
 import { projectMeta } from "../meta.js";
 import { z } from "zod";
+import type { McpServerCompat } from "../types.js";
 
 type StaticItem = {
 	name: string;
@@ -41,7 +41,11 @@ const staticItems: StaticItem[] = [
 	},
 ];
 
-const staticPrompt = (server: McpServer, item: StaticItem, content: string) => {
+const staticPrompt = (
+	server: McpServerCompat,
+	item: StaticItem,
+	content: string,
+) => {
 	// Register as prompt
 	server.registerPrompt(item.name, {}, async () => {
 		return {
@@ -77,7 +81,7 @@ const staticPrompt = (server: McpServer, item: StaticItem, content: string) => {
 	);
 };
 
-export const registerStaticPrompts = (server: McpServer) => {
+export const registerStaticPrompts = (server: McpServerCompat) => {
 	for (const item of staticItems) {
 		const content = readFileSync(
 			projectMeta.findPath(item.filePath),

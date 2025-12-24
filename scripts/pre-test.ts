@@ -122,7 +122,9 @@ async function getPublishedVersions(): Promise<string[]> {
 	if (GITHUB_TOKEN) {
 		console.log("[pre-test] Using authenticated GitHub API requests");
 	} else {
-		console.log("[pre-test] Using unauthenticated GitHub API (set GITHUB_TOKEN for higher rate limits)");
+		console.log(
+			"[pre-test] Using unauthenticated GitHub API (set GITHUB_TOKEN for higher rate limits)",
+		);
 	}
 
 	const data = await fetchWithRetry<Array<{ name: string }>>(

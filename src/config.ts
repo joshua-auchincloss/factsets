@@ -81,6 +81,24 @@ const inputFileArg = argument(string(), {
 	description: message`Input file path for restore`,
 });
 
+const hostOption = optional(
+	option("-H", "--host", string(), {
+		description: message`Host to bind HTTP server to (enables HTTP mode instead of stdio)`,
+		errors: {
+			invalidValue: () => message`Invalid host`,
+		},
+	}),
+);
+
+const portOption = optional(
+	option("-P", "--port", string(), {
+		description: message`Port to bind HTTP server to (requires --host)`,
+		errors: {
+			invalidValue: () => message`Invalid port`,
+		},
+	}),
+);
+
 export const connect = (databaseUrl: string) => {
 	return drizzle(databaseUrl);
 };
@@ -95,6 +113,8 @@ const mcpServerOptions = object({
 	watchSkills: watchSkillsFlag,
 	noWatchSkills: noWatchSkillsFlag,
 	noSeed: noSeedFlag,
+	host: hostOption,
+	port: portOption,
 });
 
 const mcpServerCommand = command("mcp-server", mcpServerOptions);
@@ -105,6 +125,24 @@ const watchFilesCommand = command(
 		type: constant("watch-files"),
 		databaseUrl,
 		pollInterval: pollIntervalOption,
+	}),
+);
+
+const formatOption = withDefault(
+	option("-f", "--format", string(), {
+		description: message`Output format: markdown or json`,
+		errors: {
+			invalidValue: () => message`Invalid format. Valid: markdown, json`,
+		},
+	}),
+	"markdown",
+);
+
+const capabilitiesCommand = command(
+	"capabilities",
+	object({
+		type: constant("capabilities"),
+		format: formatOption,
 	}),
 );
 
@@ -143,6 +181,8 @@ export type McpServerConfig = {
 	readonly watchSkills: boolean;
 	readonly noWatchSkills?: true;
 	readonly noSeed?: true;
+	readonly host?: string;
+	readonly port?: string;
 };
 
 export type WatchFilesConfig = {
@@ -168,12 +208,18 @@ export type WorkerConfig = {
 	readonly databaseUrl: string;
 };
 
+export type CapabilitiesConfig = {
+	readonly type: "capabilities";
+	readonly format: string;
+};
+
 type Command =
 	| McpServerConfig
 	| WatchFilesConfig
 	| DumpConfig
 	| RestoreConfig
-	| WorkerConfig;
+	| WorkerConfig
+	| CapabilitiesConfig;
 
 export type AppConfig = {
 	readonly command: Command;
@@ -183,6 +229,7 @@ const appConfig = object({
 	command: or(
 		mcpServerCommand,
 		watchFilesCommand,
+		capabilitiesCommand,
 		dumpCommand,
 		restoreCommand,
 		workerCommand,

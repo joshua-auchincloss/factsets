@@ -5,6 +5,7 @@ description: "Step-by-step guide for adding new MCP tools to factsets"
 tags: ["mcp-tools", "factsets", "architecture"]
 updated: 2025-12-20
 ---
+
 # Adding a New MCP Tool to Factsets
 
 ## Overview
@@ -64,7 +65,7 @@ export function registerMyTools(server: McpServer, db: DB) {
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
-    }
+    },
   );
 }
 ```

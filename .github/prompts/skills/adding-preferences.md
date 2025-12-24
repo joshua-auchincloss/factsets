@@ -5,6 +5,7 @@ description: "How to add new user preferences to the Factsets configuration syst
 tags: ["factsets", "development", "preferences", "configuration"]
 updated: 2025-12-22
 ---
+
 # Adding New Preferences to Factsets
 
 ## Overview
@@ -20,19 +21,16 @@ When adding a new preference, update these files in order:
 Add type definition for the new preference:
 
 ```typescript
-export type PreferenceNewOption =
-	| "value1"
-	| "value2"
-	| "value3";
+export type PreferenceNewOption = "value1" | "value2" | "value3";
 ```
 
 Add field to `UserPreferencesConfig` interface:
 
 ```typescript
 export interface UserPreferencesConfig {
-	// ... existing fields
-	/** Description of what this preference controls */
-	newOption: PreferenceNewOption;
+  // ... existing fields
+  /** Description of what this preference controls */
+  newOption: PreferenceNewOption;
 }
 ```
 
@@ -42,8 +40,8 @@ Add default value in `DEFAULT_USER_PREFERENCES`:
 
 ```typescript
 export const DEFAULT_USER_PREFERENCES: UserPreferencesConfig = {
-	// ... existing defaults
-	newOption: "value1",
+  // ... existing defaults
+  newOption: "value1",
 };
 ```
 
@@ -65,9 +63,9 @@ Add special handling for banned/omit values if applicable:
 
 ```typescript
 if (value === "banned") {
-	if (key === "pref_new_option") {
-		return "User BANS new option - description of what this means";
-	}
+  if (key === "pref_new_option") {
+    return "User BANS new option - description of what this means";
+  }
 }
 ```
 
@@ -85,14 +83,15 @@ Add to categories array in `generatePreferencePrompt`:
 
 ```typescript
 const categories = {
-	// ... existing categories
-	code: ["...", "pref_new_option", "..."],
+  // ... existing categories
+  code: ["...", "pref_new_option", "..."],
 };
 ```
 
 ### 4. Documentation Files
 
 Update these docs:
+
 - docs/config.md - Add to appropriate table
 - src/prompts/config.md - Same as above (keep in sync)
 - docs/facts-agent-flow.md - Update example keys if relevant
@@ -112,6 +111,7 @@ Update user-preferences-guide.md skill if the preference is commonly used.
 ## Value Conventions
 
 Standard value meanings:
+
 - `banned` - Strictly prohibited, never use
 - `omit` - Do not include at all
 - `minimal` - Use sparingly, only when essential
@@ -124,4 +124,4 @@ Run `bun test` after changes to verify type consistency across the codebase.
 
 ## Sync Note
 
-Files docs/*.md and src/prompts/*.md should stay synchronized. The prompts/ versions are used by the MCP server at runtime.
+Files docs/_.md and src/prompts/_.md should stay synchronized. The prompts/ versions are used by the MCP server at runtime.

@@ -7,6 +7,14 @@
 	"main": "dist/main.js",
 	"types": "dist/main.d.ts",
 	"type": "module",
+	"keywords": [
+		"ai",
+		"mcp",
+		"agent",
+		"sqlite",
+		"knowledge-base",
+		"model-context-protocol"
+	],
 	"mcpName": "io.github.joshua-auchincloss/factsets",
 	"authors": [
 		{
@@ -67,6 +75,7 @@
 		"drizzle-orm": "^1.0.0-beta.3",
 		"libsql": "^0.5.22",
 		"turndown": "^7.2.2",
-		"zod": "3"
+		"zod": "3",
+		"zod-to-json-schema": "^3.25.0"
 	}
 }

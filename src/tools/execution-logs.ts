@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	submitExecutionLogs,
@@ -14,8 +13,9 @@ import {
 	executionLogOutput,
 } from "../schemas/execution-logs.js";
 import { registerDbTool } from "./utils.js";
+import type { McpServerCompat } from "../types.js";
 
-export function registerExecutionLogTools(server: McpServer, db: DB) {
+export function registerExecutionLogTools(server: McpServerCompat, db: DB) {
 	registerDbTool(server, db, {
 		name: "submit_execution_logs",
 		title: "Submit Execution Logs",
