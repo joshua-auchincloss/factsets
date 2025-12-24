@@ -46,10 +46,6 @@ Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, et
 Or run directly:
 
 ```bash
-# mcp-server is the default command
-bunx factsets
-
-# Explicit command also works
 bunx factsets mcp-server
 ```
 

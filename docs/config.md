@@ -150,6 +150,24 @@ Use `set_config` to adjust any threshold:
 | Long-running CI without rebuilds | Raise `freshness_generated_files` to 24h |
 | Database migrations happen often | Lower `freshness_database` to 24h        |
 
+## When to Suggest Configuration Changes
+
+| User Says                    | Config to Suggest       | Value         |
+| ---------------------------- | ----------------------- | ------------- |
+| "Files change a lot"         | `freshness_source_code` | 4-6           |
+| "Docs are always outdated"   | `freshness_documentation` | 24          |
+| "I need more context"        | `context_budget_facts`  | 100           |
+| "Search is not finding X"    | `tag_synonyms`          | Add mapping   |
+| "Backend should include API" | `tag_hierarchies`       | Add hierarchy |
+| "Always include project tag" | `required_tags`         | Add rule      |
+
+### DO NOT Change Without Asking
+
+- Any freshness threshold
+- Skills directory location
+- Required tags
+- Search limits
+
 ## Examples
 
 ### GitHub Copilot Setup
@@ -571,7 +589,28 @@ Use `infer_preference` when a user expresses a preference:
 
 - Explicit preferences (`explicit: true`) are always applied
 - Inferred preferences require `confidence >= 0.8`
-- Inferred preferences don't override explicit user settings
+- Inferred preferences do not override explicit user settings
+
+## Detecting User Preferences
+
+### Explicit Signals (confidence: 1.0, explicit: true)
+
+- "No emojis" -> `pref_emoji_usage: banned`
+- "Be more concise" -> `pref_verbosity: minimal`
+- "Add more comments" -> `pref_code_comments: verbose`
+- "Skip confirmations" -> `pref_confirmations: skip`
+
+### Implicit Signals (confidence: 0.8-0.9)
+
+- User edits your response to remove something -> infer they do not want it
+- User asks for more detail repeatedly -> `pref_verbosity: detailed`
+- User always uses specific date format -> `pref_date_format: match it`
+- User never uses your suggested alternatives -> `pref_suggestions: omit`
+
+### Observation Window
+
+Track over 3+ interactions before inferring implicit preferences.
+Do not infer implicitly from single interactions.
 
 ### Examples
 

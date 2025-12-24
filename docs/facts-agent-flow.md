@@ -90,6 +90,105 @@ Every prompt.
 
 Factsets is not optional. Every research task, URL fetch, and successful command must be captured automatically.
 
+## Pre-Response Checklist
+
+Before responding to any user prompt:
+
+- Did I `search_facts` for relevant domain knowledge?
+- Did I `search_skills` if this involves a procedure?
+- Am I about to claim something I should verify first?
+- Will my response involve code? Check `get_preference_prompt`
+- Am I learning something new? Prepare to `submit_facts`
+
+## Prompt Classification and Tool Selection
+
+| Prompt Type           | Primary Tools                            | Search Strategy                       |
+| --------------------- | ---------------------------------------- | ------------------------------------- |
+| Question about project| `search_facts`                           | Tags from question + "project"        |
+| Debug/fix request     | `search_facts` + `search_execution_logs` | Error keywords, component tags        |
+| "How do I..."         | `search_skills`                          | Task-related tags                     |
+| Code generation       | `search_facts` + `get_preference_prompt` | Domain tags + code style              |
+| Research request      | `search_resources`                       | Domain tags                           |
+
+## Tag Selection Strategy
+
+### Deriving Tags from User Prompt
+
+1. Extract nouns: "Fix the database migration" -> database, migration
+2. Add context: What component? What domain? -> drizzle, schema
+3. Include action type: fix -> bugs, debugging, issues
+4. Use hierarchy: If unsure, use broader parent tag
+
+### Tag Expansion
+
+- Start broad (e.g., `["testing"]`)
+- If too many results, narrow (`["testing", "unit"]`)
+- If no results, try synonyms or check `tag_synonyms` config
+
+## Using Factsets During Long Tasks
+
+For complex, multi-step tasks, use Factsets as checkpoints between steps - not just at the start and end.
+
+### Why Mid-Task Usage Matters
+
+- Context windows grow large during complex work
+- Knowledge discovered mid-task can be lost if you wait
+- Execution logs are most accurate when logged immediately
+- Breaking work into capture points creates natural checkpoints
+
+### Example: Multi-File Refactoring Task
+
+1. **Start**: `search_facts` + `search_skills` for relevant patterns
+2. **After analyzing codebase**: `submit_facts` with newly discovered patterns
+3. **After each successful command**: `submit_execution_logs` immediately
+4. **After completing a component**: `submit_facts` with learnings from that component
+5. **After finding a reusable procedure**: `create_skill` while it is fresh
+6. **End**: Final `submit_facts` for any remaining insights
+
+### Example: Research and Implementation Task
+
+1. **Start**: `search_facts` for existing knowledge
+2. **After fetching documentation**: `add_resources` immediately
+3. **After reading docs**: `submit_facts` with key findings
+4. **During implementation**: `submit_execution_logs` as commands succeed
+5. **When hitting issues**: `submit_facts` with gotchas/workarounds
+6. **End**: `create_skill` if a reusable workflow emerged
+
+### Batch Operations
+
+- Submit multiple facts in one call, not one at a time
+- Use `add_resources` with array, not individual calls
+- Log multiple commands with `submit_execution_logs` array
+
+### Smart Search
+
+- Use `tags[]` for filtering when you know the domain
+- Use `query` for full-text search when exploring
+- Use `orderBy: 'usage'` for established domains
+- `get_knowledge_context` combines facts + skills + resources in one call
+
+## Knowledge Capture Decision Tree
+
+### Fact vs Skill vs Resource
+
+- **Fact**: Atomic truth, 1-3 sentences, no procedure
+  - "Project uses Bun 1.0.4"
+  - "API returns { data, error } wrapper"
+- **Skill**: Multi-step procedure, reusable workflow
+  - How to run tests
+  - How to deploy
+  - Debugging a specific class of issues
+- **Resource**: External content that may change
+  - Documentation URLs
+  - Config files that are frequently referenced
+  - API schemas
+
+### When NOT to Capture
+
+- Obvious from code (IDE can tell you)
+- User's immediate request context (ephemeral)
+- Debugging output (unless pattern emerges)
+
 ## Automatic Triggers
 
 These actions require no user prompt. They happen automatically.
@@ -207,7 +306,7 @@ Descriptions must accurately reflect content. When you encounter a resource or s
 - Generic phrases like "configuration file" when it's specifically "Linter config with strict rules"
 - Outdated references to removed features or changed behavior
 - Missing key details that would help with search and discovery
-- Descriptions that don't mention the primary use case
+- Descriptions that do not mention the primary use case
 
 **Example fixes:**
 
@@ -230,7 +329,7 @@ Do not wait for maintenance reports. Fix descriptions as you encounter them duri
 | Skip checking existing knowledge  | `search_facts`, `search_skills` before work                 |
 | Create skill without checking     | `search_skills` first, then create or update                |
 | Leave placeholder descriptions    | Fix `[auto-migrated]` / `[auto-generated]` when encountered |
-| Ignore misaligned descriptions    | Update descriptions when they don't match actual content    |
+| Ignore misaligned descriptions    | Update descriptions when they do not match actual content   |
 | Use generic descriptions          | Be specific about technologies, purpose, and scope          |
 | Go multiple prompts without use   | Use Factsets tools on every prompt                          |
 | Only check facts at session start | Validate facts continuously                                 |
@@ -536,7 +635,7 @@ Ask the user about configuration when:
 - They repeatedly encounter stale warnings for certain file types
 - They express that certain files "never change" or "change constantly"
 - A project has unusual characteristics (e.g., docs generated from code)
-- The default thresholds don't match their development cadence
+- The default thresholds do not match their development cadence
 
 Do not change config without user acknowledgment. Explain what the change does and why.
 
@@ -621,6 +720,70 @@ Before ending any task:
 9. Does this workspace have AGENTS.md? -> create if missing
 
 If you did not use Factsets during research, learning, or execution, you did it wrong.
+
+## Quick Reference
+
+### Every Prompt
+
+1. SEARCH: `search_facts` + `search_skills` with relevant tags
+2. WORK: Complete the task (use Factsets between steps for long tasks)
+3. CAPTURE: `submit_facts` for learnings, `submit_execution_logs` for commands
+
+### During Long Tasks
+
+Do not wait until the end - capture as you go:
+
+- After each successful command: `submit_execution_logs`
+- After discovering something: `submit_facts`
+- After fetching URLs: `add_resources`
+
+### Key Triggers
+
+- Fetch URL -> `add_resources` immediately
+- Multi-step procedure -> `create_skill`
+- User feedback on style -> `infer_preference`
+- Command succeeds -> `submit_execution_logs`
+
+### Tag Strategy
+
+Extract nouns from prompt -> Add domain context -> Include action type
+
+### Remember
+
+- Use continuously, not just at session start
+- Capture immediately, not at end of task
+- Check before creating (avoid duplicates)
+- Factsets is free - use liberally
+
+## Error Recovery
+
+### Tool Returns Error
+
+- Log the error context for debugging
+- Continue work without that specific knowledge
+- Try alternative search (different tags, query)
+
+### No Results Found
+
+- Broaden tags (remove most specific)
+- Try query instead of tags
+- Check `tag_synonyms` for alternatives
+- This is normal for new domains - proceed and capture
+
+## Scope and Boundaries
+
+### What Factsets Is
+
+- Persistent memory for learned knowledge
+- Cross-session context store
+- Command history and validation
+
+### What Factsets Is NOT
+
+- Real-time file watcher (use IDE for that)
+- Version control (use git)
+- Task management (it is knowledge, not todos)
+- User conversation history (facts are distilled, not logs)
 
 ## Reminder
 

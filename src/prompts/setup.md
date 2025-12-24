@@ -96,6 +96,34 @@ Submit facts about what you discover. This creates baseline knowledge:
 - Key dependencies
 - Project purpose/goal
 
+### 1.3.1 Project Type Examples
+
+These are examples of tags and facts that might be relevant - adapt to the actual project.
+
+**Web Frontend**
+
+Relevant tags might include: frontend, components, state, routing, styling
+
+Useful initial facts: Framework version, state management approach, build tooling
+
+**API Server**
+
+Relevant tags might include: api, endpoints, auth, database, validation
+
+Useful initial facts: Framework, DB type, auth patterns, response shapes
+
+**CLI Tool**
+
+Relevant tags might include: cli, commands, arguments, config, output
+
+Useful initial facts: Runtime, argument parsing approach, config format
+
+**Library/Package**
+
+Relevant tags might include: api, exports, types, compatibility
+
+Useful initial facts: Target environments, peer dependencies, versioning policy
+
 ### 1.4 Register Key Resources
 
 Register configuration files and documentation as resources:
@@ -359,6 +387,33 @@ This project uses Factsets for persistent knowledge management.
 - Log all successful commands: `submit_execution_logs`
 - Check preferences before generating output: `get_preference_prompt`
 
+## On Every Prompt
+
+Before responding to any user message:
+
+1. `search_facts` with tags derived from the prompt topic
+2. `search_skills` if the prompt involves a procedure or "how to"
+
+## During Long Tasks
+
+For multi-step work, use Factsets between steps:
+
+- After each successful command: `submit_execution_logs`
+- After discovering something: `submit_facts`
+- After fetching external content: `add_resources`
+
+Do not wait until the task is complete - context windows grow large and knowledge gets lost.
+
+## Automatic Capture Triggers
+
+| Event                            | Action                       |
+| -------------------------------- | ---------------------------- |
+| You learn something              | `submit_facts` immediately   |
+| You fetch a URL                  | `add_resources` with the URL |
+| A command succeeds               | `submit_execution_logs`      |
+| You write a multi-step procedure | `create_skill`               |
+| User corrects your output        | `infer_preference`           |
+
 ## No Reminders Needed
 
 Agents must use Factsets automatically. Users should never need to remind
@@ -492,7 +547,7 @@ If the project has synonymous or hierarchical concepts, configure tag relationsh
 
 ### 5.1 Essential Project Skills
 
-Create skills for common project tasks if they don't exist:
+Create skills for common project tasks if they do not exist:
 
 **Project Overview Skill**:
 
@@ -653,7 +708,7 @@ If the project structure is unclear:
 
 ## Anti-Patterns to Avoid
 
-| Don't                             | Do                                      |
+| Do Not                            | Do                                      |
 | --------------------------------- | --------------------------------------- |
 | Remove existing AGENTS.md content | Add sections alongside existing content |
 | Move skills without asking        | Confirm directory changes with user     |
@@ -678,3 +733,23 @@ Setup is complete when:
 6. User has been informed of what was done and next steps
 
 **Remember**: The goal is to set up future agents for success. Every fact, skill, and resource created now saves discovery time on every future prompt.
+
+## Post-Setup Maintenance
+
+### Daily (during active development)
+
+- Facts get submitted automatically during work
+- Execution logs accumulate naturally
+- No explicit action needed if following workflow
+
+### Weekly
+
+- `get_maintenance_report` to check for stale items
+- Review unverified facts for accuracy
+- Sync skills if files edited outside Factsets
+
+### On Major Changes
+
+- Update project facts when dependencies change
+- Create/update skills when workflows change
+- Refresh resources when referenced docs update
