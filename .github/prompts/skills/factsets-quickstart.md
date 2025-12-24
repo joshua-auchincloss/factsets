@@ -5,25 +5,33 @@ Welcome to Factsets! This guide will help you get started with building your kno
 ## Core Concepts
 
 ### Facts
+
 Facts are atomic pieces of information. They should be:
+
 - **Self-contained**: Understandable without additional context
 - **Verifiable**: Can be marked as verified once confirmed
 - **Tagged**: Associated with relevant tags for organization
 
 ### Tags
+
 Tags organize your knowledge into meaningful groups. Good tag practices:
+
 - Use descriptive names like `project-config`, `api-patterns`, `debugging`
 - Create hierarchies with prefixes: `auth:jwt`, `auth:oauth`
 - System tags use the `factsets:system` prefix
 
 ### Skills
+
 Skills are markdown documents capturing procedural knowledge:
+
 - How to perform specific tasks
 - Best practices and patterns
 - Workflows and processes
 
 ### Resources
+
 Resources track external content:
+
 - Files in your workspace
 - URLs and documentation
 - API endpoints

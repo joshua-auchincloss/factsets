@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	createSkill,
@@ -35,8 +34,9 @@ import {
 	skillRestoreOutput,
 } from "../schemas/skills.js";
 import { registerDbTool } from "./utils.js";
+import type { McpServerCompat } from "../types.js";
 
-export function registerSkillTools(server: McpServer, db: DB) {
+export function registerSkillTools(server: McpServerCompat, db: DB) {
 	registerDbTool(server, db, {
 		name: "create_skill",
 		title: "Create Skill",

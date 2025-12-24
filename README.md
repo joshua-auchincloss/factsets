@@ -33,26 +33,39 @@ bun install --global factsets
 Add to your MCP client configuration (Claude Desktop, GitHub Copilot, Cursor, etc.), using `bunx`, `npx` or `pnpm dlx` accordingly:
 
 ```json
-//
 {
   "mcpServers": {
     "factsets": {
       "command": "bunx",
-      "args": ["factsets"],
-    },
-  },
+      "args": ["factsets", "mcp-server"]
+    }
+  }
 }
 ```
 
 Or run directly:
 
 ```bash
-# mcp-server is the default command
-bunx factsets
-
-# Explicit command also works
 bunx factsets mcp-server
 ```
+
+### First-Time Setup
+
+After adding Factsets to your MCP client, run the setup prompt to integrate it into your project:
+
+**In a supported IDE**: Type `/mcp.factsets.setup` in the chat to run the guided setup
+
+**In other clients**: Call the `get_setup_guide` tool or use the `setup` prompt
+
+The setup guide will:
+
+- Analyze your project structure and establish baseline facts
+- Configure the skills directory for your AI client
+- Create or update `AGENTS.md` with Factsets instructions
+- Migrate any existing skills with Factsets integration
+- Register key configuration files as resources
+
+This one-time setup ensures agents have full context on every future interaction.
 
 ### CLI Commands
 
@@ -194,15 +207,17 @@ See [Configuration Guide](docs/config.md) for all options.
 
 ## MCP Prompts
 
-| Prompt               | Description                          |
-| -------------------- | ------------------------------------ |
-| `knowledge_context`  | Build context from tags              |
-| `recall_skill`       | Get skill with references            |
-| `maintenance_report` | Staleness summary                    |
-| `refresh_guide`      | Instructions to refresh a resource   |
-| `agent_guide`        | Agent workflow guide (call first)    |
-| `concept`            | Conceptual overview and philosophy   |
-| `config`             | Configuration guide with all options |
+| Prompt               | Description                                |
+| -------------------- | ------------------------------------------ |
+| `setup`              | Guided setup for new project integration   |
+| `user_preferences`   | Get user preferences for output formatting |
+| `knowledge_context`  | Build context from tags                    |
+| `recall_skill`       | Get skill with references                  |
+| `maintenance_report` | Staleness summary                          |
+| `refresh_guide`      | Instructions to refresh a resource         |
+| `agent_guide`        | Agent workflow guide (call first)          |
+| `concept`            | Conceptual overview and philosophy         |
+| `config`             | Configuration guide with all options       |
 
 ## Documentation
 

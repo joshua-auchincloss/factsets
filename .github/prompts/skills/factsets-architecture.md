@@ -5,6 +5,7 @@ description: "High-level architecture overview of the factsets system"
 tags: ["factsets", "architecture", "seeding"]
 updated: 2025-12-20
 ---
+
 # Understanding Factsets Architecture
 
 ## Core Concept

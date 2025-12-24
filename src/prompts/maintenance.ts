@@ -1,10 +1,10 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import { z } from "zod";
 import {
 	generateMaintenanceReport,
 	generateRefreshGuide,
 } from "./generators.js";
+import type { McpServerCompat } from "../types.js";
 
 const maintenanceReportArgs = {
 	maxAgeHours: z
@@ -19,7 +19,7 @@ const refreshGuideArgs = {
 	resourceId: z.string().describe("The ID of the resource to refresh"),
 };
 
-export function registerMaintenancePrompts(server: McpServer, db: DB) {
+export function registerMaintenancePrompts(server: McpServerCompat, db: DB) {
 	server.registerPrompt(
 		"maintenance_report",
 		{

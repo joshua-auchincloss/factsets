@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	checkStale,
@@ -11,8 +10,9 @@ import {
 	markRefreshedOutput,
 } from "../schemas/context.js";
 import { registerDbTool } from "./utils.js";
+import type { McpServerCompat } from "../types.js";
 
-export function registerContextTools(server: McpServer, db: DB) {
+export function registerContextTools(server: McpServerCompat, db: DB) {
 	registerDbTool(server, db, {
 		name: "check_stale",
 		title: "Check for Stale Resources",

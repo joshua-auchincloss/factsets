@@ -3,6 +3,13 @@ node_modules
 
 !.github/prompts/skills
 
+versions.json
+
+caps.json
+caps.md
+
+scripts/mcp-bench-config.ts
+
 # output
 out
 dist

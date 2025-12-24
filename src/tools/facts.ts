@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	submitFacts,
@@ -26,8 +25,9 @@ import {
 	factRestoreOutput,
 } from "../schemas/facts.js";
 import { registerDbTool } from "./utils.js";
+import type { McpServerCompat } from "../types.js";
 
-export function registerFactTools(server: McpServer, db: DB) {
+export function registerFactTools(server: McpServerCompat, db: DB) {
 	registerDbTool(server, db, {
 		name: "submit_facts",
 		title: "Submit Facts",

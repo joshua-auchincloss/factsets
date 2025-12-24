@@ -13,6 +13,9 @@ export type TestServer = PromiseResult<ReturnType<typeof createTestServer>>;
 /** Default request timeout (ms) - increased for CI environments */
 const DEFAULT_REQUEST_TIMEOUT = 120000;
 
+/** Default connection timeout (ms) - Windows CI needs more time to spawn processes */
+const DEFAULT_CONNECTION_TIMEOUT = 60000;
+
 export async function createTestDb() {
 	const db = createConnection(":memory:");
 	await runMigrations(db);
@@ -22,28 +25,37 @@ export async function createTestDb() {
 export interface TestServerOptions extends Partial<StdioServerParameters> {
 	/** Timeout for individual requests in ms (default: 120000) */
 	requestTimeout?: number;
+	/** Timeout for initial connection in ms (default: 60000) */
+	connectionTimeout?: number;
 }
 
 export async function createTestServer(overrides?: TestServerOptions) {
 	const requestTimeout = overrides?.requestTimeout ?? DEFAULT_REQUEST_TIMEOUT;
+	const connectionTimeout =
+		overrides?.connectionTimeout ?? DEFAULT_CONNECTION_TIMEOUT;
 
-	const client = new Client({
-		name: "test-client",
-		version: "1.0.0",
+	const client = new Client(
+		{
+			name: "test-client",
+			version: "1.0.0",
+		},
+		{
+			capabilities: {},
+		},
+	);
+
+	const transport = new StdioClientTransport({
+		command: overrides?.command ?? "bun",
+		args: overrides?.args ?? [
+			"src/main.ts",
+			"mcp-server",
+			"--database-url",
+			"sqlite://:memory:",
+			"--no-watch-skills",
+		],
 	});
 
-	await client.connect(
-		new StdioClientTransport({
-			command: overrides?.command ?? "bun",
-			args: overrides?.args ?? [
-				"src/main.ts",
-				"mcp-server",
-				"--database-url",
-				"sqlite://:memory:",
-				"--no-watch-skills",
-			],
-		}),
-	);
+	await client.connect(transport, { timeout: connectionTimeout });
 
 	return {
 		client,

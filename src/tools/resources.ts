@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { DB } from "../db/index.js";
 import {
 	addResources,
@@ -33,13 +32,14 @@ import {
 } from "../schemas/resources.js";
 import { registerDbTool } from "./utils.js";
 import { z } from "zod";
+import type { McpServerCompat } from "../types.js";
 
 // Error output schema for resource not found
 const resourceNotFoundOutput = z.object({
 	error: z.string(),
 });
 
-export function registerResourceTools(server: McpServer, db: DB) {
+export function registerResourceTools(server: McpServerCompat, db: DB) {
 	registerDbTool(server, db, {
 		name: "add_resources",
 		title: "Add Resources",

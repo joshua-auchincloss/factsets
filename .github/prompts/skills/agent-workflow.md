@@ -5,6 +5,7 @@ description: "MANDATORY workflow for AI agents using Factsets. Defines automatic
 tags: ["factsets", "workflow", "agent", "mandatory", "best-practices"]
 updated: 2025-12-20
 ---
+
 # Factsets Agent Workflow
 
 ## MANDATORY: Always-On Knowledge Management
@@ -13,17 +14,17 @@ updated: 2025-12-20
 
 ### Automatic Triggers (No User Prompt Needed)
 
-| Trigger | Action | Tool |
-|---------|--------|------|
-| **Session start** | Check existing knowledge | `list_tags`, `search_facts` |
-| **Research task** | Store findings immediately | `submit_facts`, `add_resources` |
-| **Fetch any URL** | Register as resource | `add_resources` with URL |
-| **Learn new information** | Capture as facts | `submit_facts` |
-| **Run successful command** | Log execution | `submit_execution_logs` |
-| **Before creating skill** | Check for existing skill | `search_skills` by name or tags |
-| **Create procedure** | Document as skill | `create_skill` (only if no match found) |
-| **Complete multi-step task** | Summarize learnings | `submit_facts` |
-| **See placeholder description** | Fix with real description | `update_resource_snapshot` / `update_skill` |
+| Trigger                         | Action                     | Tool                                        |
+| ------------------------------- | -------------------------- | ------------------------------------------- |
+| **Session start**               | Check existing knowledge   | `list_tags`, `search_facts`                 |
+| **Research task**               | Store findings immediately | `submit_facts`, `add_resources`             |
+| **Fetch any URL**               | Register as resource       | `add_resources` with URL                    |
+| **Learn new information**       | Capture as facts           | `submit_facts`                              |
+| **Run successful command**      | Log execution              | `submit_execution_logs`                     |
+| **Before creating skill**       | Check for existing skill   | `search_skills` by name or tags             |
+| **Create procedure**            | Document as skill          | `create_skill` (only if no match found)     |
+| **Complete multi-step task**    | Summarize learnings        | `submit_facts`                              |
+| **See placeholder description** | Fix with real description  | `update_resource_snapshot` / `update_skill` |
 
 ### Self-Check Questions (Before Ending ANY Task)
 
@@ -47,16 +48,16 @@ updated: 2025-12-20
 
 ## Anti-Patterns (Never Do These)
 
-| Anti-Pattern | Why It's Wrong | Correct Behavior |
-|--------------|----------------|------------------|
-| Fetching URLs without `add_resources` | Knowledge is lost | Always register URLs |
-| Research without `submit_facts` | Findings disappear | Capture key learnings |
-| Commands succeed without logging | Memory lost | `submit_execution_logs` |
-| Waiting for user to say "save this" | Reactive, not proactive | Capture automatically |
-| Creating docs but not skills | Not searchable | Use `create_skill` |
-| Not checking existing knowledge | Reinventing wheel | Search first |
-| Creating skill without checking | Creates duplicates | `search_skills` first, update or create |
-| Leaving placeholder descriptions | Knowledge is degraded | Fix `[auto-migrated]` / `[auto-generated]` |
+| Anti-Pattern                          | Why It's Wrong          | Correct Behavior                           |
+| ------------------------------------- | ----------------------- | ------------------------------------------ |
+| Fetching URLs without `add_resources` | Knowledge is lost       | Always register URLs                       |
+| Research without `submit_facts`       | Findings disappear      | Capture key learnings                      |
+| Commands succeed without logging      | Memory lost             | `submit_execution_logs`                    |
+| Waiting for user to say "save this"   | Reactive, not proactive | Capture automatically                      |
+| Creating docs but not skills          | Not searchable          | Use `create_skill`                         |
+| Not checking existing knowledge       | Reinventing wheel       | Search first                               |
+| Creating skill without checking       | Creates duplicates      | `search_skills` first, update or create    |
+| Leaving placeholder descriptions      | Knowledge is degraded   | Fix `[auto-migrated]` / `[auto-generated]` |
 
 ## Placeholder Descriptions
 

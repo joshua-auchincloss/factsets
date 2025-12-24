@@ -5,6 +5,7 @@ description: "How to work with user preferences for response generation, code ou
 tags: ["factsets", "user-preferences", "agent-workflow", "best-practices"]
 updated: 2025-12-22
 ---
+
 # User Preferences Guide
 
 ## Overview
@@ -33,6 +34,7 @@ User preferences control how agents generate all output: responses, code, and do
 ### Default Behavior
 
 The defaults optimize for token efficiency:
+
 - `pref_emoji_usage: banned` - No emojis ever
 - `pref_special_chars: banned` - No decorative unicode
 - `pref_verbosity: concise` - No unnecessary words
@@ -75,6 +77,7 @@ When user expresses a preference, update it:
 ## Common Patterns
 
 ### Token-Efficient Output
+
 ```
 pref_verbosity: minimal
 pref_summary_position: omit
@@ -83,6 +86,7 @@ pref_suggestions: omit
 ```
 
 ### Detailed Explanations
+
 ```
 pref_verbosity: detailed
 pref_code_block_context: full
@@ -91,6 +95,7 @@ pref_docs_examples: comprehensive
 ```
 
 ### Minimal Interaction
+
 ```
 pref_confirmations: skip
 pref_questions: avoid
@@ -99,6 +104,7 @@ pref_progress_updates: false
 ```
 
 ### Clean Code Output
+
 ```
 pref_code_comments: banned
 pref_code_inline_comments: banned
@@ -108,7 +114,9 @@ pref_code_imports_style: grouped
 ```
 
 ## Best Practices
+
 CONFIG_SCHEMA
+
 1. **Call get_preference_prompt at session start** - Include in context
 2. **Watch for preference signals** - "be more concise", "add comments", etc.
 3. **Update immediately when user expresses preference** - Don't wait

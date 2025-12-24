@@ -16,8 +16,6 @@ import {
 	isVersionPublished,
 	MigrationTestDb,
 	createVersionArgs,
-	sortVersions,
-	compareVersions,
 	IS_WINDOWS,
 	sleep,
 } from "./utils";
@@ -65,25 +63,22 @@ describe("incremental migrations", () => {
 	});
 
 	describe("release tag discovery", () => {
-		it("should discover git release tags", async () => {
+		it("should have release tags from versions.json", async () => {
 			const tags = await getReleaseTags();
 			expect(Array.isArray(tags)).toBe(true);
-			// Tags should be in ascending version order
-			for (let i = 1; i < tags.length; i++) {
-				const prev = tags[i - 1].replace(/^v/, "");
-				const curr = tags[i].replace(/^v/, "");
-				expect(compareVersions(curr, prev)).toBeGreaterThanOrEqual(0);
+			expect(tags.length).toBeGreaterThan(0);
+			// All tags should have v prefix
+			for (const tag of tags) {
+				expect(tag.startsWith("v")).toBe(true);
 			}
 		});
 
 		it("should have published versions available", async () => {
 			expect(publishedVersions.length).toBeGreaterThan(0);
-		});
-
-		it("should sort versions correctly", () => {
-			const unsorted = ["0.1.3", "0.0.1", "0.1.0", "0.0.2"];
-			const sorted = sortVersions(unsorted);
-			expect(sorted).toEqual(["0.0.1", "0.0.2", "0.1.0", "0.1.3"]);
+			// All versions should be valid semver format (no v prefix)
+			for (const version of publishedVersions) {
+				expect(version).toMatch(/^\d+\.\d+\.\d+/);
+			}
 		});
 	});
 

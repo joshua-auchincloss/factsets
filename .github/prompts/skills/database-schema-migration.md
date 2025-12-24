@@ -5,6 +5,7 @@ description: "How to update the Factsets database schema using Drizzle ORM migra
 tags: ["database", "drizzle", "migration", "schema", "factsets"]
 updated: 2025-12-21
 ---
+
 # Database Schema Migration with Drizzle
 
 This skill documents how to update the Factsets database schema using Drizzle ORM.
@@ -22,6 +23,7 @@ This skill documents how to update the Factsets database schema using Drizzle OR
 Edit `src/db/schema.ts` to add, remove, or modify columns/tables.
 
 **Example: Adding a new column with default**
+
 ```typescript
 description: text("description")
   .default("[auto-migrated] Needs description")
@@ -37,12 +39,14 @@ bun drizzle-kit generate
 ```
 
 This creates a new migration folder in `src/db/migrations/` with:
+
 - `migration.sql` - The SQL statements
 - `snapshot.json` - Schema snapshot for tracking
 
 ### 3. Review Migration
 
 Always review the generated SQL to ensure it:
+
 - Uses proper defaults for NOT NULL columns
 - Handles existing data appropriately
 - Includes necessary indexes
@@ -63,6 +67,7 @@ For in-memory test databases, migrations run in order from the `db/migrations` f
 ## Common Patterns
 
 ### Adding a required column to existing table
+
 ```typescript
 newColumn: text("new_column")
   .default("[auto-migrated] Needs value")
@@ -70,6 +75,7 @@ newColumn: text("new_column")
 ```
 
 ### Making optional column required
+
 Generate a migration that sets defaults, then update schema to .notNull()
 
 ## Troubleshooting

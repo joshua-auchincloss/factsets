@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { spawn, type ChildProcess } from "node:child_process";
+import { createServer, type Server } from "node:http";
 import type { CommandHandler } from "./types.js";
 import { createConnection, runMigrations } from "../db/index.js";
 import { initializeConfigDefaults } from "../db/operations/config.js";
@@ -22,6 +24,7 @@ import { registerStaticPrompts } from "../prompts/static-prompts.js";
 import { projectMeta } from "../meta.js";
 import { applySeed } from "../seed/index.js";
 import serverJson from "../../server.json" with { type: "json" };
+import type { McpServerCompat } from "../types.js";
 
 type Handler = CommandHandler<
 	"mcp-server",
@@ -29,6 +32,7 @@ type Handler = CommandHandler<
 		transport: Transport;
 		server: McpServer;
 		watcherProcess?: ChildProcess;
+		httpServer?: Server;
 	}
 >;
 
@@ -65,6 +69,25 @@ function spawnWatcher(databaseUrl: string): ChildProcess {
 
 	return child;
 }
+
+export const register = (
+	server: McpServerCompat,
+	db: ReturnType<typeof createConnection>,
+) => {
+	registerTagTools(server, db);
+	registerFactTools(server, db);
+	registerResourceTools(server, db);
+	registerSkillTools(server, db);
+	registerContextTools(server, db);
+	registerConfigTools(server, db);
+	registerPromptTools(server, db);
+	registerExecutionLogTools(server, db);
+	registerPreferencesTools(server, db);
+
+	registerStaticPrompts(server);
+	registerKnowledgePrompts(server, db);
+	registerMaintenancePrompts(server, db);
+};
 
 export const mcpServerHandler = async (
 	config: Parameters<Handler>[0],
@@ -113,21 +136,62 @@ export const mcpServerHandler = async (
 		}
 	}
 
-	registerTagTools(server, db);
-	registerFactTools(server, db);
-	registerResourceTools(server, db);
-	registerSkillTools(server, db);
-	registerContextTools(server, db);
-	registerConfigTools(server, db);
-	registerPromptTools(server, db);
-	registerExecutionLogTools(server, db);
-	registerPreferencesTools(server, db);
+	register(server, db);
 
-	registerStaticPrompts(server);
-	registerKnowledgePrompts(server, db);
-	registerMaintenancePrompts(server, db);
+	// Determine transport mode: HTTP if host is provided, otherwise stdio
+	const useHttpTransport = !!config.host;
+	let usedTransport: Transport;
+	let httpServer: Server | undefined;
 
-	const usedTransport: Transport = transport ?? new StdioServerTransport();
+	if (useHttpTransport && !transport) {
+		const host = config.host!;
+		const port = parseInt(config.port || "3000", 10);
+
+		// Create HTTP transport
+		const httpTransport = new StreamableHTTPServerTransport({
+			sessionIdGenerator: () => crypto.randomUUID(),
+		});
+		usedTransport = httpTransport;
+
+		// Create HTTP server
+		httpServer = createServer(async (req, res) => {
+			// Handle CORS preflight
+			if (req.method === "OPTIONS") {
+				res.writeHead(204, {
+					"Access-Control-Allow-Origin": "*",
+					"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+					"Access-Control-Allow-Headers": "Content-Type, mcp-session-id",
+				});
+				res.end();
+				return;
+			}
+
+			// Add CORS headers to all responses
+			res.setHeader("Access-Control-Allow-Origin", "*");
+			res.setHeader(
+				"Access-Control-Allow-Headers",
+				"Content-Type, mcp-session-id",
+			);
+
+			try {
+				await httpTransport.handleRequest(req, res);
+			} catch (error) {
+				console.error("[mcp-server] HTTP request error:", error);
+				if (!res.headersSent) {
+					res.writeHead(500, { "Content-Type": "application/json" });
+					res.end(JSON.stringify({ error: "Internal server error" }));
+				}
+			}
+		});
+
+		httpServer.listen(port, host, () => {
+			console.error(
+				`[factsets] HTTP MCP server listening on http://${host}:${port}`,
+			);
+		});
+	} else {
+		usedTransport = transport ?? new StdioServerTransport();
+	}
 
 	// Spawn file watcher subprocess if enabled (default: true)
 	// --no-watch-skills overrides --watch-skills
@@ -150,6 +214,10 @@ export const mcpServerHandler = async (
 			watcherProcess.kill("SIGTERM");
 		}
 
+		if (httpServer) {
+			httpServer.close();
+		}
+
 		// Exit the process after cleanup
 		if (signal === "SIGINT" || signal === "SIGTERM") {
 			process.exit(0);
@@ -170,6 +238,7 @@ export const mcpServerHandler = async (
 		server,
 		transport: usedTransport,
 		watcherProcess,
+		httpServer,
 	};
 };
 
