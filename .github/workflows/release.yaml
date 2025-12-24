@@ -20,6 +20,11 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Pre-hydrate test dependencies
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun run pre-test
+
       - name: Run E2E
         run: bun e2e
 
